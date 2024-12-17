@@ -1,6 +1,8 @@
 
 import { Partner } from '../models/index.models.js';
 
+//crear un controlador para saber cual es el artner que tiene el addres mas cercano
+
 const getAllPartners = async (req, res) => {
   try {
     const records = await Partner.findAll();

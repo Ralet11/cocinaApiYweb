@@ -123,7 +123,6 @@ const registerUser = async (req, res) => {
       SECRET_KEY,
       { expiresIn: '1h' } // Cambiar según sea necesario
     );
-
     res.status(201).json({
       message: 'Usuario registrado exitosamente',
       user: {

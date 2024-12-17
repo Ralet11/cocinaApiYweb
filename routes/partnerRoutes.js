@@ -10,6 +10,8 @@ import {
 
 const router = express.Router();
 
+//crear una ruta para el partner mas cercano qe coincida con la ruta del front
+
 router.get('/', getAllPartners);
 router.get('/:id', getPartnerById);
 router.post('/', createPartner);

@@ -23,6 +23,14 @@ const Partner = sequelize.define('partner', {
   birthdate: {
     type: DataTypes.STRING(45),
     allowNull: true
+  },
+  latitude: {
+    type: DataTypes.FLOAT, // Almacenará la latitud en formato de punto flotante
+    allowNull: false
+  },
+  longitude: {
+    type: DataTypes.FLOAT, // Almacenará la longitud en formato de punto flotante
+    allowNull: false
   }
 }, {
   tableName: 'partner',
