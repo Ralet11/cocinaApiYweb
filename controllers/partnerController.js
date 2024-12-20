@@ -1,4 +1,4 @@
-import { Partner, Product } from '../models/index.models.js';
+import { Category, Partner, Product } from '../models/index.models.js';
 import { getDistance } from 'geolib';
 
 // Obtener todos los partners
@@ -61,7 +61,7 @@ const deletePartner = async (req, res) => {
 // Obtener el partner más cercano utilizando geolib
 const getClosestPartner = async (req, res) => {
   const { latitude, longitude } = req.body.address;
-  console.log(req.body, "Body")
+
   const lat = latitude
   const lng = longitude
 
@@ -73,13 +73,14 @@ const getClosestPartner = async (req, res) => {
 
   try {
     const partners = await Partner.findAll();
-
     if (partners.length === 0) {
       return res.status(404).json({ error: 'No se encontraron partners' });
     }
 
     let closestPartner = null;
     let minDistance = Infinity;
+
+
 
     for (const partner of partners) {
       const distance = getDistance(
@@ -92,7 +93,7 @@ const getClosestPartner = async (req, res) => {
         closestPartner = partner;
       }
     }
-    console.log(closestPartner)
+ 
     res.json({ closestPartner, distance: minDistance });
   } catch (error) {
     res.status(500).json({ error: 'Error al calcular el partner más cercano' });
@@ -100,22 +101,70 @@ const getClosestPartner = async (req, res) => {
 };
 
 // Obtener los productos de un partner específico por ID
+
 const getPartnerProducts = async (req, res) => {
   try {
     const partnerId = req.params.id;
+
+    // Buscar el Partner con sus productos y categorías relacionadas
     const partner = await Partner.findByPk(partnerId, {
-      include: [{ model: Product }],
+      include: [
+        {
+          model: Product,
+          through: { attributes: [] }, // Ignorar atributos de la tabla intermedia
+          include: [
+            {
+              model: Category,
+              through: { attributes: [] } // Ignorar atributos de la tabla intermedia
+            }
+          ]
+        }
+      ]
     });
 
     if (!partner) {
       return res.status(404).json({ error: 'Partner no encontrado' });
     }
 
-    res.json({ partner: partner.name, products: partner.Products });
+    console.log(partner, "partner")
+
+    // Verificar si el partner tiene productos
+    if (!partner.products || partner.products.length === 0) {
+      return res.json({
+        partner: partner.name,
+        cat: {} // Devolver categorías vacías
+      });
+    }
+
+    // Agrupar productos por categorías
+    const groupedProducts = {};
+    partner.products.forEach((product) => {
+      if (product.categories && product.categories.length > 0) {
+        product.categories.forEach((category) => {
+          if (!groupedProducts[category.name]) {
+            groupedProducts[category.name] = [];
+          }
+          groupedProducts[category.name].push({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            img: product.img,
+            discount: product.discount
+          });
+        });
+      }
+    });
+
+    // Respuesta con el nombre del partner y los productos agrupados
+    return res.json({
+      partner: partner.name,
+      cat: groupedProducts
+    });
   } catch (error) {
-    res.status(500).json({ error: 'Error al obtener los productos del partner' });
+    console.error(error);
+    return res.status(500).json({ error: 'Error al obtener los productos del partner' });
   }
-};
+}
 
 export {
   getAllPartners,

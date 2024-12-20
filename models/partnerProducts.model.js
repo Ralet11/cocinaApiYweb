@@ -25,7 +25,7 @@ const PartnerProducts = sequelize.define('partner_products', {
   }
 }, {
   tableName: 'partner_products',
-  timestamps: false
+  timestamps: true
 });
 
 export default PartnerProducts;

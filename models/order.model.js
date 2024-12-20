@@ -45,7 +45,7 @@ const Order = sequelize.define('order', {
   }
 }, {
   tableName: 'order',
-  timestamps: false
+  timestamps: true
 });
 
 export default Order;
