@@ -1,17 +1,17 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../database.js';
 
-const CategoryProducts = sequelize.define('category_products', {
+const ProductIngredient = sequelize.define('product_ingredient', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true
   },
-  category_id: {
+  ingredient_id: {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: 'category',
+      model: 'ingredient',
       key: 'id'
     }
   },
@@ -24,8 +24,8 @@ const CategoryProducts = sequelize.define('category_products', {
     }
   }
 }, {
-  tableName: 'category_products',
+  tableName: 'product_ingredient',
   timestamps: true
 });
 
-export default CategoryProducts;
+export default ProductIngredient;

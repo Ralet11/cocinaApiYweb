@@ -34,7 +34,7 @@ const Partner = sequelize.define('partner', {
   }
 }, {
   tableName: 'partner',
-  timestamps: false
+  timestamps: true
 });
 
 export default Partner;
