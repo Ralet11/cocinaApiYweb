@@ -66,6 +66,8 @@ Ingredient.belongsToMany(Product, {
   foreignKey: 'ingredient_id',
   otherKey: 'product_id',
 });
+ProductIngredient.belongsTo(Ingredient, { foreignKey: 'ingredient_id' });
+ProductIngredient.belongsTo(Product, { foreignKey: 'product_id' });
 
 // Exportar todos los modelos
 export {

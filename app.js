@@ -12,6 +12,7 @@ import partnerRouter from "./routes/partnerRoutes.js";
 import categoryProductsRouter from "./routes/category_productsRoutes.js";
 import orderProductsRouter from "./routes/order_productsRoutes.js";
 import partnerProductsRouter from "./routes/partner_productsRoutes.js";
+import ingredientRouter from "./routes/ingredientsRoutes.js"
 
 const app = express();
 
@@ -40,6 +41,7 @@ app.use("/api/partner", partnerRouter);
 app.use("/api/category-products", categoryProductsRouter);
 app.use("/api/order-products", orderProductsRouter);
 app.use("/api/partner-products", partnerProductsRouter);
+app.use("/api/ingredient", ingredientRouter)
 
 // Configurar servidor
 const PORT = 3000;
