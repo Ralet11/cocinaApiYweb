@@ -8,6 +8,7 @@ import OrderProducts from './orderProducts.model.js';
 import PartnerProducts from './partnerProducts.model.js';
 import Ingredient from './ingredients.model.js';
 import ProductIngredient from './productIngredient.js';
+import Review from './review.model.js';
 
 // Relaciones
 
@@ -69,6 +70,18 @@ Ingredient.belongsToMany(Product, {
 ProductIngredient.belongsTo(Ingredient, { foreignKey: 'ingredient_id' });
 ProductIngredient.belongsTo(Product, { foreignKey: 'product_id' });
 
+// Review - Order
+Order.hasMany(Review, { foreignKey: 'order_id' });
+Review.belongsTo(Order, { foreignKey: 'order_id' });
+
+// Review - Partner
+Partner.hasMany(Review, { foreignKey: 'partner_id' });
+Review.belongsTo(Partner, { foreignKey: 'partner_id' });
+
+// Review - User
+User.hasMany(Review, { foreignKey: 'user_id' });
+Review.belongsTo(User, { foreignKey: 'user_id' });
+
 // Exportar todos los modelos
 export {
   User,
@@ -81,4 +94,5 @@ export {
   PartnerProducts,
   Ingredient,
   ProductIngredient,
+  Review,
 };
