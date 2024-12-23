@@ -1,12 +1,13 @@
 
 import express from 'express';
-import {getAllIngredients} from './../controllers/'
+import { getByProductId, getAll } from '../controllers/ingredientsController.js';
 
 const router = express.Router();
 
-router.get('/', getAllIngredients);
+router.get('/', getAll);
 /* router.post('/', createIngredient); */
 /* router.put('/:id', updateProduct);
 router.delete('/:id', deleteProduct); */
+router.get('/getByProduct/:id', getByProductId)
 
 export default router;
