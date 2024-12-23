@@ -60,6 +60,8 @@ const deletePartner = async (req, res) => {
 
 // Obtener el partner más cercano utilizando geolib
 const getClosestPartner = async (req, res) => {
+
+  
   const { latitude, longitude } = req.body.address;
 
   const lat = latitude
@@ -111,10 +113,12 @@ const getPartnerProducts = async (req, res) => {
       include: [
         {
           model: Product,
+          attributes: ['id', 'name', 'price', 'img', 'discount', 'description'], // Asegúrate de incluir "description"
           through: { attributes: [] }, // Ignorar atributos de la tabla intermedia
           include: [
             {
               model: Category,
+              attributes: ['id', 'name'], // Traer solo los atributos necesarios de las categorías
               through: { attributes: [] } // Ignorar atributos de la tabla intermedia
             }
           ]
@@ -126,7 +130,7 @@ const getPartnerProducts = async (req, res) => {
       return res.status(404).json({ error: 'Partner no encontrado' });
     }
 
-    console.log(partner, "partner")
+
 
     // Verificar si el partner tiene productos
     if (!partner.products || partner.products.length === 0) {
@@ -139,6 +143,7 @@ const getPartnerProducts = async (req, res) => {
     // Agrupar productos por categorías
     const groupedProducts = {};
     partner.products.forEach((product) => {
+ 
       if (product.categories && product.categories.length > 0) {
         product.categories.forEach((category) => {
           if (!groupedProducts[category.name]) {
@@ -149,12 +154,14 @@ const getPartnerProducts = async (req, res) => {
             name: product.name,
             price: product.price,
             img: product.img,
-            discount: product.discount
+            discount: product.discount,
+            description: product.description // Asegurarte de que este campo sea incluido
           });
         });
       }
     });
 
+    console.log(groupedProducts, "qui1")
     // Respuesta con el nombre del partner y los productos agrupados
     return res.json({
       partner: partner.name,
@@ -164,8 +171,7 @@ const getPartnerProducts = async (req, res) => {
     console.error(error);
     return res.status(500).json({ error: 'Error al obtener los productos del partner' });
   }
-}
-
+};
 export {
   getAllPartners,
   getPartnerById,
