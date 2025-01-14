@@ -31,6 +31,14 @@ const Partner = sequelize.define('partner', {
   longitude: {
     type: DataTypes.FLOAT, // Almacenará la longitud en formato de punto flotante
     allowNull: false
+  },
+  password: {
+    type: DataTypes.STRING(255),
+    allowNull: false,
+    validate: {
+      notEmpty: true, // No permite contraseñas vacías
+    },
+  
   }
 }, {
   tableName: 'partner',

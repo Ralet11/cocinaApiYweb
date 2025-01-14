@@ -26,7 +26,14 @@ const Product = sequelize.define('product', {
   description: {
     type: DataTypes.STRING(600),
     allowNull: true
-  }
+  },
+    stock: {
+    type: DataTypes.INTEGER(),
+    allowNull: false,
+    validate: {
+    min: 0, // Valida que el valor mínimo sea 0
+  },
+  } 
 }, {
   tableName: 'product',
   timestamps: true
