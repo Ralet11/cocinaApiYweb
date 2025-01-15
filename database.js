@@ -1,7 +1,7 @@
 import { Sequelize } from "sequelize";
 
 
-const sequelize = new Sequelize("cocina", "postgres", "02324aaA!", {
+const sequelize = new Sequelize("proyectoCocina", "postgres", "admin", {
     host:"localhost", 
     dialect:"postgres",
     logging: false
