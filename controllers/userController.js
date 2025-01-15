@@ -2,6 +2,7 @@
 import { User } from '../models/index.models.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken'; // Si no está importado, agrega esta línea
+import Address from '../models/Addresses.model.js';
 
 const SECRET_KEY = "tu_clave_secreta"; // Asegúrate de definir tu clave secreta
 
@@ -140,6 +141,81 @@ const registerUser = async (req, res) => {
   }
 };
 
+9
+
+const getAddressesByUser = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    // Obtener todas las direcciones de un usuario
+    const addresses = await Address.findAll({
+      where: { user_id: userId }
+    });
+
+    res.status(200).json(addresses);
+  } catch (error) {
+    console.error('Error al obtener direcciones:', error);
+    res.status(500).json({ error: 'Error al obtener direcciones' });
+  }
+};
+
+const createAddress = async (req, res) => {
+  const { user_id, street, city, state, zipCode, country, type, latitude, longitude, apartNumb, comments } = req.body;
+  console.log(req.body, "body");
+
+  try {
+
+    if (!user_id || !street || !type) {
+      console.log("error en los campos", req.body);
+      return res.status(400).json({ error: 'Los campos user_id, street y type son obligatorios' });
+    }
+
+    // Crear la nueva dirección con los nuevos campos
+    const newAddress = await Address.create({
+      user_id,
+      street,
+      city: city || null,
+      state: state || null,
+      zipCode: zipCode || "",
+      country: country || null,
+      type,
+      lat: latitude || null,
+      lng: longitude || null,
+      apartNumb: apartNumb || null,
+      comments: comments || null,
+    });
+
+    res.status(201).json(newAddress);
+  } catch (error) {
+    console.error('Error al crear la dirección:', error);
+    res.status(500).json({ error: 'Error al crear la dirección' });
+  }
+};
+
+
+const deleteAddress = async (req, res) => {
+  const { id } = req.params; // o el nombre que uses en tu ruta
+  console.log(id, "adrres id")
+
+  try {
+    // Buscar la dirección por ID
+    const address = await Address.findByPk(id);
+
+    // Verificar si existe
+    if (!address) {
+      return res.status(404).json({ error: 'Dirección no encontrada' });
+    }
+
+    // Eliminar la dirección
+    await address.destroy();
+
+    // Responder con éxito
+    res.json({ message: 'Dirección eliminada correctamente' });
+  } catch (error) {
+    console.error('Error al eliminar la dirección:', error);
+    res.status(500).json({ error: 'Error al eliminar la dirección' });
+  }
+};
 
 export {
   getAllUsers,
@@ -148,5 +224,8 @@ export {
   updateUser,
   deleteUser,
   registerUser,
-  loginUser
+  loginUser,
+  createAddress,
+  getAddressesByUser,
+  deleteAddress
 };

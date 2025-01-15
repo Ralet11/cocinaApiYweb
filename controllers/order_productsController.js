@@ -1,5 +1,5 @@
 
-import { OrderProducts } from '../models/index.models.js';
+import { OrderProducts, Product } from '../models/index.models.js';
 
 const getAllOrderProductses = async (req, res) => {
   try {
@@ -10,11 +10,24 @@ const getAllOrderProductses = async (req, res) => {
   }
 };
 
-const getOrderProductsById = async (req, res) => {
+ const getOrderProductsById = async (req, res) => {
   try {
-    const record = await OrderProducts.findByPk(req.params.id);
-    if (record) res.json(record);
-    else res.status(404).json({ error: 'OrderProducts no encontrado' });
+    const record = await OrderProducts.findAll({
+      where: { order_id: req.params.id },
+      include: [
+        {
+          model: Product,
+          as: 'product', // Debe coincidir con el alias definido en la relación
+          attributes: ['id', 'name', 'price', 'img', 'discount', 'description'],
+        },
+      ],
+    });
+
+    if (record && record.length > 0) {
+      res.json(record);
+    } else {
+      res.status(404).json({ error: 'OrderProducts no encontrado' });
+    }
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener registro' });
   }

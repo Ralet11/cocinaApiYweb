@@ -1,5 +1,6 @@
 
-import { Order } from '../models/index.models.js';
+import { Order, Product } from '../models/index.models.js';
+import OrderProducts from '../models/orderProducts.model.js'
 
 const getAllOrders = async (req, res) => {
   try {
@@ -20,14 +21,94 @@ const getOrderById = async (req, res) => {
   }
 };
 
-const createOrder = async (req, res) => {
+export const getAllOrdersByUser = async (req, res) => {
+  const { userId } = req.params; 
   try {
-    const newRecord = await Order.create(req.body);
-    res.status(201).json(newRecord);
+    const orders = await Order.findAll({
+      where: { user_id: userId },
+      include: [
+        {
+          model: OrderProducts,
+          as: 'order_products',
+    
+          include: [
+            {
+              model: Product,
+              as: 'product',
+            }
+          ],
+        }
+      ],
+    });
+
+    return res.status(200).json(orders);
   } catch (error) {
-    res.status(500).json({ error: 'Error al crear registro' });
+    console.error('Error fetching user orders:', error);
+    return res.status(500).json({ error: 'Error fetching user orders' });
   }
 };
+function unifyItems(items) {
+  const groupedMap = {};
+
+  items.forEach((item) => {
+    // Creamos una key en base a la “combinación” de extras
+    // Podrías incluir más campos si te interesa, como 'option', etc.
+    const extrasKey = JSON.stringify({
+      productId: item.productId,
+      includedIngredients: item.includedIngredients,
+      extraIngredients: item.extraIngredients
+    });
+
+    if (groupedMap[extrasKey]) {
+      // Si ya existe, sumamos cantidades y precios
+      groupedMap[extrasKey].quantity += item.quantity;
+      groupedMap[extrasKey].totalPrice += item.totalPrice;
+    } else {
+      // Creamos la entrada
+      groupedMap[extrasKey] = { ...item };
+    }
+  });
+
+  return Object.values(groupedMap);
+}
+
+// En tu createOrder
+const createOrder = async (req, res) => {
+  try {
+    const { items, ...rest } = req.body;
+
+    // 1) Crear la orden
+    const newOrder = await Order.create({ ...rest });
+
+    // 2) Unificar ítems con la misma configuración
+    const unifiedItems = unifyItems(items);
+
+    // 3) Crear los productos en la tabla
+    const orderProducts = unifiedItems.map((item) => ({
+      order_id: newOrder.id,
+      product_id: item.productId,
+      quantity: item.quantity,
+      price: item.totalPrice,
+      extras: {
+        includedIngredients: item.includedIngredients,
+        extraIngredients: item.extraIngredients
+      }
+    }));
+    
+    await OrderProducts.bulkCreate(orderProducts);
+
+    // 4) Responder
+    res.status(201).json({
+      message: 'Order created successfully',
+      order: newOrder,
+      orderProducts,
+    });
+  } catch (error) {
+    console.error('Error creating order:', error);
+    res.status(500).json({ error: 'Error creating order' });
+  }
+};
+
 
 const updateOrder = async (req, res) => {
   try {

@@ -82,6 +82,13 @@ Review.belongsTo(Partner, { foreignKey: 'partner_id' });
 User.hasMany(Review, { foreignKey: 'user_id' });
 Review.belongsTo(User, { foreignKey: 'user_id' });
 
+Order.hasMany(OrderProducts, { as: 'order_products', foreignKey: 'order_id' });
+OrderProducts.belongsTo(Order, { as: 'order', foreignKey: 'order_id' });
+
+// Si quieres asociar `OrderProducts` con `Product`:
+OrderProducts.belongsTo(Product, { as: 'product', foreignKey: 'product_id' });
+Product.hasMany(OrderProducts, { as: 'order_products', foreignKey: 'product_id' });
+
 // Exportar todos los modelos
 export {
   User,
