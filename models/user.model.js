@@ -25,10 +25,10 @@ const User = sequelize.define('user', {
     allowNull: true
   },
   password: {
-    type: DataTypes.STRING(255), // 255 para admitir contraseñas cifradas o largas
+    type: DataTypes.STRING(255),
     allowNull: false,
     validate: {
-      notEmpty: true, // No permite contraseñas vacías
+      notEmpty: true
     },
   }
 }, {

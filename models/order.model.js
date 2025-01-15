@@ -32,20 +32,26 @@ const Order = sequelize.define('order', {
     }
   },
   finalPrice: {
-    type: DataTypes.DECIMAL(10,2),
+    type: DataTypes.DECIMAL(10, 2),
     allowNull: true
   },
   deliveryFee: {
-    type: DataTypes.DECIMAL(10,2),
+    type: DataTypes.DECIMAL(10, 2),
     allowNull: true
   },
   price: {
-    type: DataTypes.DECIMAL(10,2),
+    type: DataTypes.DECIMAL(10, 2),
     allowNull: true
+  },
+  status: {
+    type: DataTypes.ENUM('pendiente', 'aceptada', 'envio', 'finalizada'),
+    allowNull: false,
+    defaultValue: 'pendiente'
   }
 }, {
   tableName: 'order',
   timestamps: true
 });
+
 
 export default Order;

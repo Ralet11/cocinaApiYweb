@@ -13,6 +13,7 @@ import categoryProductsRouter from "./routes/category_productsRoutes.js";
 import orderProductsRouter from "./routes/order_productsRoutes.js";
 import partnerProductsRouter from "./routes/partner_productsRoutes.js";
 import ingredientRouter from "./routes/ingredientsRoutes.js"
+import paymentRouter from "./routes/paymentRoutes.js"
 
 //hoy
 import reviewRouter from "./routes/reviewRoutes.js";
@@ -47,6 +48,12 @@ app.use("/api/category-products", categoryProductsRouter);
 app.use("/api/order-products", orderProductsRouter);
 app.use("/api/partner-products", partnerProductsRouter);
 app.use("/api/ingredient", ingredientRouter)
+app.use("/api/payment", paymentRouter)
+
+app.use((err, req, res, next) => {
+    console.error('Error global:', err);
+    res.status(500).json({ message: 'Error interno del servidor' });
+  });
 
 //hoy
 app.use("/api/review", reviewRouter)

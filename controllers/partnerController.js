@@ -22,6 +22,96 @@ const getPartnerById = async (req, res) => {
   }
 };
 
+export const loginPartner = async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    // Buscar partner por email
+    const partner = await Partner.findOne({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    // Comparar contraseña
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Contraseña incorrecta' });
+    }
+
+    // Generar token JWT
+    const token = jwt.sign(
+      { id: user.id, email: user.email },
+      SECRET_KEY,
+      { expiresIn: '1h' } // Expiración del token
+    );
+
+    // Enviar respuesta con usuario y token
+    res.json({
+      message: 'Inicio de sesión exitoso',
+      user: {
+        id: partner.id,
+        name: partner.name,
+        email: partner.email,
+        latitude: partner.latitude,
+        longitude: partner.longitude,
+      },
+      token,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al iniciar sesión' });
+  }
+};
+
+
+export const registerPartner = async (req, res) => {
+  const { name, lastName, email, password, birthdate, latitude, longitude } = req.body;
+
+  try {
+    // Verificar si el email ya está registrado
+    const existingPartner = await Partner.findOne({ where: { email } });
+    if (existingPartner) {
+      return res.status(400).json({ error: 'El correo ya está en uso' });
+    }
+
+    // Encriptar la contraseña
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Crear el nuevo Partner
+    const newPartner = await Partner.create({
+      name,
+      lastName,
+      email,
+      password: hashedPassword,
+      birthdate,
+      latitude,
+      longitude,
+    });
+
+    // Generar un token JWT
+    const token = jwt.sign(
+      { id: newPartner.id, email: newPartner.email },
+      SECRET_KEY,
+      { expiresIn: '1h' } // Cambiar según sea necesario
+    );
+    res.status(201).json({
+      message: 'Usuario registrado exitosamente',
+      user: {
+        id: newPartner.id,
+        name: newPartner.name,
+        lastName: newPartner.lastName,
+        email: newPartner.email,
+        birthdate: newPartner.birthdate,
+        latitude: newPartner.latitude,
+        longitude: newPartner.longitude,
+      },
+      token,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al registrar usuario' });
+  }
+};
 // Crear un nuevo partner
 const createPartner = async (req, res) => {
   try {
@@ -57,6 +147,8 @@ const deletePartner = async (req, res) => {
     res.status(500).json({ error: 'Error al eliminar registro' });
   }
 };
+
+
 
 // Obtener el partner más cercano utilizando geolib
 const getClosestPartner = async (req, res) => {

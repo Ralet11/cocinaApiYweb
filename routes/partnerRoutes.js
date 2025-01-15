@@ -7,9 +7,25 @@ import {
   deletePartner,
   getClosestPartner, // Importamos el nuevo controlador
   getPartnerProducts, // Importamos el controlador para los productos
+  loginPartner,
+  registerPartner
 } from '../controllers/partnerController.js';
+import { validateToken } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
+
+// Middleware de autenticación, excluyendo las rutas de login y register
+router.use((req, res, next) => {
+  // Excluir rutas específicas
+  if (req.path === '/login' || req.path === '/register') {
+    return next(); // No aplicar el middleware aquí
+  }
+  validateToken(req, res, next); // Aplicar middleware a todas las demás rutas
+});
+
+// Rutas públicas
+router.post('/login',loginPartner);
+router.post('/register',registerPartner );
 
 router.get('/', getAllPartners);
 

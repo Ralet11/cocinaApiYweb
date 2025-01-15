@@ -6,7 +6,10 @@ import {
   updateUser,
   deleteUser,
   loginUser,
-  registerUser
+  registerUser,
+  getAddressesByUser,
+  createAddress,
+  deleteAddress
 } from '../controllers/userController.js';
 import { validateToken } from '../middlewares/authMiddleware.js';
 
@@ -31,5 +34,9 @@ router.get('/:id', getUserById);
 router.post('/', createUser);
 router.put('/:id', updateUser);
 router.delete('/:id', deleteUser);
+router.get('/getAllAddress/:userId', getAddressesByUser);
+router.post('/addAddress', createAddress);
+router.get('/getAddress/addressId', getAddressesByUser);
+router.delete('/deleteAddress/:id', deleteAddress);
 
 export default router;
