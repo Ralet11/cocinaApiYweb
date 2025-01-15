@@ -9,6 +9,6 @@ router.get('/', getAll);
 /* router.post('/', createIngredient); */
 /* router.put('/:id', updateProduct);
 router.delete('/:id', deleteProduct); */
-router.get('/getByProduct/:id', validateToken(), getByProductId)
+router.get('/getByProduct/:id', getByProductId)
 
 export default router;
