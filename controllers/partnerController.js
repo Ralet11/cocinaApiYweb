@@ -1,5 +1,7 @@
 import { Category, Partner, Product } from '../models/index.models.js';
 import { getDistance } from 'geolib';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
 // Obtener todos los partners
 const getAllPartners = async (req, res) => {
@@ -28,19 +30,19 @@ export const loginPartner = async (req, res) => {
   try {
     // Buscar partner por email
     const partner = await Partner.findOne({ where: { email } });
-    if (!user) {
+    if (!partner) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
     // Comparar contraseña
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await bcrypt.compare(password, partner.password);
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Contraseña incorrecta' });
     }
 
     // Generar token JWT
     const token = jwt.sign(
-      { id: user.id, email: user.email },
+      { id: partner.id, email: partner.email },
       SECRET_KEY,
       { expiresIn: '1h' } // Expiración del token
     );
@@ -48,7 +50,7 @@ export const loginPartner = async (req, res) => {
     // Enviar respuesta con usuario y token
     res.json({
       message: 'Inicio de sesión exitoso',
-      user: {
+      partner: {
         id: partner.id,
         name: partner.name,
         email: partner.email,
@@ -65,6 +67,8 @@ export const loginPartner = async (req, res) => {
 
 
 export const registerPartner = async (req, res) => {
+
+
   const { name, lastName, email, password, birthdate, latitude, longitude } = req.body;
 
   try {
@@ -112,17 +116,7 @@ export const registerPartner = async (req, res) => {
     res.status(500).json({ error: 'Error al registrar usuario' });
   }
 };
-// Crear un nuevo partner
-const createPartner = async (req, res) => {
-  try {
-    const newRecord = await Partner.create(req.body);
-    res.status(201).json(newRecord);
-  } catch (error) {
-    res.status(500).json({ error: 'Error al crear registro' });
-  }
-};
 
-// Actualizar un partner existente
 const updatePartner = async (req, res) => {
   try {
     const record = await Partner.findByPk(req.params.id);
@@ -267,7 +261,6 @@ const getPartnerProducts = async (req, res) => {
 export {
   getAllPartners,
   getPartnerById,
-  createPartner,
   updatePartner,
   deletePartner,
   getClosestPartner,
