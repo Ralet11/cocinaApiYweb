@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nuevo Registro de Partner</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 20px auto;
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    h2 {
+      color: #333333;
+    }
+    p {
+      color: #555555;
+      line-height: 1.5;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 12px;
+      color: #888888;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Solicitud de Registro de Partner</h2>
+    <p><strong>Datos del aspirante:</strong></p>
+    <p>
+      <strong>Nombre:</strong> {{name}} {{lastName}} <br>
+      <strong>Email:</strong> {{email}} <br>
+      <strong>Fecha de nacimiento:</strong> {{birthdate}} <br>
+      <strong>Ubicación:</strong> ({{latitude}}, {{longitude}})
+    </p>
+    <p>Por favor, revisa esta solicitud y actúa en consecuencia.</p>
+    <div class="footer">
+      <p>Este mensaje fue generado automáticamente.</p>
+    </div>
+  </div>
+</body>
+</html>

@@ -4,10 +4,11 @@ import {
   getPartnerById,
   updatePartner,
   deletePartner,
-  getClosestPartner, // Importamos el nuevo controlador
-  getPartnerProducts, // Importamos el controlador para los productos
+  getClosestPartner, 
+  getPartnerProducts, 
   loginPartner,
-  registerPartner
+  registerPartner,
+  requestPartner //nueva ruta para enviar solicitud de revision al admin(email)
 } from '../controllers/partnerController.js';
 import { validateToken } from '../middlewares/authMiddleware.js';
 
@@ -16,6 +17,7 @@ const router = express.Router();
 // Rutas públicas
 router.post('/login', loginPartner);
 router.post('/register', registerPartner);
+router.post("/request", requestPartner);
 
 // Rutas protegidas con validateToken
 router.get('/', validateToken, getAllPartners);

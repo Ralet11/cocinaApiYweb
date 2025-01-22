@@ -2,7 +2,26 @@ import { Category, Partner, Product } from '../models/index.models.js';
 import { getDistance } from 'geolib';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+import nodemailer from 'nodemailer';
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from 'url';
 
+// Define __dirname manualmente
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const adminHtmlTemplate = fs.readFileSync(
+  path.join(__dirname, "../templates", "adminTemplate.html"),
+  "utf8"
+);
+
+const aspirantHtmlTemplate = fs.readFileSync(
+  path.join(__dirname, "../templates", "aspirantTemplate.html"),
+  "utf8"
+);
+dotenv.config();
 // Obtener todos los partners
 const getAllPartners = async (req, res) => {
   try {
@@ -64,6 +83,53 @@ export const loginPartner = async (req, res) => {
     res.status(500).json({ error: 'Error al iniciar sesión' });
   }
 };
+
+
+
+export const requestPartner = async (req, res) => {
+  const { name, lastName, email, birthdate, latitude, longitude } = req.body;
+
+  try {
+    // Configuración del transporte de Nodemailer
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT,
+      secure: false, // true para 465, false para otros puertos
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    // Enviar correo al administrador
+    await transporter.sendMail({
+      from: process.env.SMTP_USER,
+      to: process.env.ADMIN_EMAIL,
+      subject: "Nuevo Registro de Partner",
+      html: adminHtmlTemplate.replace("{{name}}", name)
+                             .replace("{{lastName}}", lastName)
+                             .replace("{{email}}", email)
+                             .replace("{{birthdate}}", birthdate)
+                             .replace("{{latitude}}", latitude)
+                             .replace("{{longitude}}", longitude),
+    });
+
+    // Enviar correo al aspirante
+    await transporter.sendMail({
+      from: process.env.SMTP_USER,
+      to: email,
+      subject: "Tu solicitud está en revisión",
+      html: aspirantHtmlTemplate.replace("{{name}}", name),
+    });;
+
+    // Responder al frontend
+    res.status(200).json({ message: "Correos enviados correctamente" });
+  } catch (error) {
+    console.error("Error al enviar correos:", error);
+    res.status(500).json({ error: "No se pudo enviar la solicitud. Inténtalo más tarde." });
+  }
+};
+
 
 
 export const registerPartner = async (req, res) => {
