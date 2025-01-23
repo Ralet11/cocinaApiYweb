@@ -1,13 +1,13 @@
-
 import express from 'express';
 import {
   getAllOrders,
   getOrderById,
   createOrder,
   updateOrder,
-  deleteOrder
+  deleteOrder,
+  getAllOrdersByPartner,
 } from '../controllers/orderController.js';
-import { getAllOrdersByUser } from '../controllers/orderController.js';
+import { validateToken } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
@@ -16,6 +16,6 @@ router.get('/:id', getOrderById);
 router.post('/', createOrder);
 router.put('/:id', updateOrder);
 router.delete('/:id', deleteOrder);
-router.get('/getAllByUser/:userId', getAllOrdersByUser);
+router.get('/partner/orders', validateToken, getAllOrdersByPartner);
 
 export default router;

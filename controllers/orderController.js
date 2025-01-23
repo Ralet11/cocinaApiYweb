@@ -92,7 +92,8 @@ const createOrder = async (req, res) => {
       extras: {
         includedIngredients: item.includedIngredients,
         extraIngredients: item.extraIngredients
-      }
+      },
+      removedIngredients: item.removedIngredients || null
     }));
     
     await OrderProducts.bulkCreate(orderProducts);
@@ -134,10 +135,44 @@ const deleteOrder = async (req, res) => {
   }
 };
 
+const getAllOrdersByPartner = async (req, res) => {
+  try {
+    const partnerId = req.user.id;
+
+    if (!partnerId) {
+      return res.status(400).json({ error: 'El token no contiene un partner_id válido.' });
+    }
+
+    const orders = await Order.findAll({
+      where: { partner_id: partnerId },
+      include: [
+        {
+          model: OrderProducts,
+          as: 'order_products',
+          include: [
+            {
+              model: Product,
+              as: 'product',
+            },
+          ],
+        },
+      ],
+    });
+
+    res.status(200).json(orders);
+  } catch (error) {
+    console.error('Error fetching partner orders:', error); // Este log muestra más detalles
+    res.status(500).json({ error: 'Error al obtener las órdenes del partner' });
+  }
+};
+
+
+
 export {
   getAllOrders,
   getOrderById,
   createOrder,
   updateOrder,
-  deleteOrder
+  deleteOrder,
+  getAllOrdersByPartner
 };

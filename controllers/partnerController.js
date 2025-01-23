@@ -8,6 +8,8 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from 'url';
 
+const SECRET_KEY = process.env.JWT_SECRET || "tu_clave_secreta";
+
 // Define __dirname manualmente
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -63,7 +65,7 @@ export const loginPartner = async (req, res) => {
     const token = jwt.sign(
       { id: partner.id, email: partner.email },
       SECRET_KEY,
-      { expiresIn: '1h' } // Expiración del token
+   
     );
 
     // Enviar respuesta con usuario y token
@@ -87,6 +89,7 @@ export const loginPartner = async (req, res) => {
 
 
 export const requestPartner = async (req, res) => {
+  console.log(req.body)
   const { name, lastName, email, birthdate, latitude, longitude } = req.body;
 
   try {

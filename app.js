@@ -38,6 +38,11 @@ app.get("/", (req, res) => {
     console.log("Petición aceptada en server");
 });
 
+app.use((req, res, next) => {
+    console.log(`Request: ${req.method} ${req.url}`);
+    next();
+  });
+
 // Rutas
 app.use("/api/user", userRouter);
 app.use("/api/order", orderRouter);
