@@ -1,7 +1,7 @@
-import Review from "../models/review.model.js";
+import Review from '../models/review.model.js';
+import Order from '../models/order.model.js';
 
-
-const getAllReview = async (req, res) => {
+export const getAllReview = async (req, res) => {
   try {
     const records = await Review.findAll();
     res.json(records);
@@ -10,7 +10,7 @@ const getAllReview = async (req, res) => {
   }
 };
 
-const getReviewById = async (req, res) => {
+export const getReviewById = async (req, res) => {
   try {
     const record = await Review.findByPk(req.params.id);
     if (record) res.json(record);
@@ -20,28 +20,112 @@ const getReviewById = async (req, res) => {
   }
 };
 
-const createReview = async (req, res) => {
+//endponit para que los usuarios puedan ver sus reviews
+export const getUserReviews = async (req, res) => {
+  const userId = req.user.id; // Suponiendo que tienes middleware de autenticación
+
   try {
-    const newRecord = await Review.create(req.body);
-    res.status(201).json(newRecord);
+    const reviews = await Review.findAll({
+      where: { userId },
+      include: [
+        { model: Order, as: 'order' },
+        { model: Partner, as: 'partner' },
+      ],
+    });
+
+    return res.status(200).json(reviews);
   } catch (error) {
-    res.status(500).json({ error: 'Error al crear review' });
+    console.error(error);
+    return res.status(500).json({ message: 'Error al obtener las reviews.' });
   }
 };
 
-const updateReview = async (req, res) => {
+//endpoint para obtener las reviews de un partner
+export const getPartnerReviews = async (req, res) => {
+  const { partnerId } = req.params;
+
   try {
-    const record = await Review.findByPk(req.params.id);
-    if (record) {
-      await record.update(req.body);
-      res.json(record);
-    } else res.status(404).json({ error: 'Reviews no encontrado' });
+    const reviews = await Review.findAll({
+      where: { partnerId },
+      include: [{ model: User, as: 'user' }], // Incluir detalles del usuario
+    });
+
+    return res.status(200).json(reviews);
   } catch (error) {
-    res.status(500).json({ error: 'Error al actualizar reviews' });
+    console.error(error);
+    return res.status(500).json({ message: 'Error al obtener las reviews del partner.' });
   }
 };
 
-const deleteReview = async (req, res) => {
+
+
+
+export const createReview = async (req, res) => {
+  const { rating, comment } = req.body;
+  const userId = req.user.id; // Extraer el userId del token decodificado
+  const { orderId } = req.params;
+
+
+  try {
+    // Verificar si el pedido existe y pertenece al usuario
+    const order = await Order.findOne({ where: { id: orderId, userId } });
+
+    if (!order) {
+      return res.status(404).json({ message: 'Pedido no encontrado o no pertenece al usuario.' });
+    }
+
+    // Verificar si el pedido ya tiene una review
+    const existingReview = await Review.findOne({ where: { orderId } });
+
+    if (existingReview) {
+      return res.status(400).json({ message: 'El pedido ya ha sido calificado.' });
+    }
+
+    // Verificar que el pedido esté completado
+    if (order.status !== 'finalizada') {
+      return res.status(400).json({ message: 'Solo se pueden calificar pedidos completados.' });
+    }
+
+    // Crear la review
+    const review = await Review.create({
+      orderId,
+      userId,
+      partnerId: order.partnerId, // Asociar el partner del pedido
+      rating,
+      comment,
+    });
+
+    return res.status(201).json(review);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Error al crear la review.' });
+  }
+};
+
+export const updateReview = async (req, res) => {
+  const { id } = req.params;
+  const { rating, comment } = req.body;
+  const userId = req.user.id; // Verificar autenticación
+
+  try {
+    const review = await Review.findOne({ where: { id, userId } });
+
+    if (!review) {
+      return res.status(404).json({ message: 'Review no encontrada o no pertenece al usuario.' });
+    }
+
+    review.rating = rating;
+    review.comment = comment;
+    await review.save();
+
+    return res.status(200).json(review);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Error al actualizar la review.' });
+    }
+  }
+
+export const deleteReview = async (req, res) => {
   try {
     const record = await Review.findByPk(req.params.id);
     if (record) {
@@ -53,7 +137,8 @@ const deleteReview = async (req, res) => {
   }
 };
 
-const getAllReviewPartner = async (req,res) => {
+//endponit para obtener todas las reviews de un partner
+export const getAllReviewPartner = async (req,res) => {
     try {
         const record = await Review.findAll({where: {
             partner_id : req.params.id
@@ -64,11 +149,3 @@ const getAllReviewPartner = async (req,res) => {
       }
 };
 
-export {
-  getAllReview,
-  deleteReview,
-  getReviewById,
-  createReview,
-  updateReview,
-  getAllReviewPartner
-};

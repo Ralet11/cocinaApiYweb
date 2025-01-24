@@ -49,6 +49,7 @@ app.use("/api/order-products", orderProductsRouter);
 app.use("/api/partner-products", partnerProductsRouter);
 app.use("/api/ingredient", ingredientRouter)
 app.use("/api/payment", paymentRouter)
+app.use("/api/review", reviewRouter)
 
 app.use((err, req, res, next) => {
     console.error('Error global:', err);
