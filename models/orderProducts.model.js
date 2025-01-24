@@ -36,6 +36,11 @@ const OrderProducts = sequelize.define('order_products', {
     type: DataTypes.JSON,
     allowNull: true,
   },
+  removedIngredients: {
+      type: DataTypes.JSON,
+      allowNull: true, // Permite valores nulos para registros existentes sin ingredientes eliminados
+      defaultValue: null, // Por defecto, ningún ingrediente eliminado
+    },
 }, {
   tableName: 'order_products',
   timestamps: true,
