@@ -68,7 +68,7 @@ app.use("/api/review", reviewRouter)
 // Configurar servidor
 const PORT = 3000;
 
-sequelize.sync({ force: false })
+sequelize.sync({ alter: true })
     .then(() => {
         app.listen(PORT, () => {
             console.log(`Servidor corriendo en http://localhost:${PORT}`);
