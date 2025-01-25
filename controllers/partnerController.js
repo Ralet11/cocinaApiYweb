@@ -187,8 +187,9 @@ export const registerPartner = async (req, res) => {
 };
 
 const updatePartner = async (req, res) => {
+
   try {
-    const record = await Partner.findByPk(req.params.id);
+    const record = await Partner.findByPk(req.user.id);
     if (record) {
       await record.update(req.body);
       res.json(record);

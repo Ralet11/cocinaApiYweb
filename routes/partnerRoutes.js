@@ -22,7 +22,7 @@ router.post("/request", requestPartner);
 // Rutas protegidas con validateToken
 router.get('/', validateToken, getAllPartners);
 router.get('/:id', validateToken, getPartnerById);
-router.put('/:id', validateToken, updatePartner);
+router.put('/update', validateToken, updatePartner);
 router.delete('/:id', validateToken, deletePartner);
 
 // Nueva ruta: Obtener el partner más cercano basado en latitud, longitud y dirección

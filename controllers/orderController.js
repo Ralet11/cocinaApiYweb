@@ -113,15 +113,55 @@ const createOrder = async (req, res) => {
 
 const updateOrder = async (req, res) => {
   try {
-    const record = await Order.findByPk(req.params.id);
-    if (record) {
-      await record.update(req.body);
-      res.json(record);
-    } else res.status(404).json({ error: 'Order no encontrado' });
+    // 1. Buscamos la orden junto con sus asociaciones
+    const record = await Order.findByPk(req.params.id, {
+      include: [
+        {
+          model: OrderProducts,
+          as: 'order_products',
+          include: [
+            {
+              model: Product,
+              as: 'product',
+            },
+          ],
+        },
+      ],
+    });
+
+    // 2. Si no se encuentra, retornamos 404
+    if (!record) {
+      return res.status(404).json({ error: 'Order no encontrado' });
+    }
+
+    // 3. Actualizamos los campos de la orden
+    await record.update(req.body);
+
+    // 4. Para asegurarnos de devolver la orden ya actualizada con los includes,
+    //    la recargamos con las mismas asociaciones:
+    await record.reload({
+      include: [
+        {
+          model: OrderProducts,
+          as: 'order_products',
+          include: [
+            {
+              model: Product,
+              as: 'product',
+            },
+          ],
+        },
+      ],
+    });
+
+    // 5. Finalmente, enviamos la orden actualizada con todas las asociaciones
+    return res.json(record);
   } catch (error) {
-    res.status(500).json({ error: 'Error al actualizar registro' });
+    console.error('Error al actualizar la orden:', error);
+    return res.status(500).json({ error: 'Error al actualizar registro' });
   }
 };
+
 
 const deleteOrder = async (req, res) => {
   try {

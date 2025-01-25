@@ -32,13 +32,16 @@ const Partner = sequelize.define('partner', {
     type: DataTypes.FLOAT, // Almacenará la longitud en formato de punto flotante
     allowNull: false
   },
+  address: {
+    type: DataTypes.STRING(255), // Nuevo campo para almacenar direcciones
+    allowNull: false
+  },
   password: {
     type: DataTypes.STRING(255),
     allowNull: false,
     validate: {
       notEmpty: true, // No permite contraseñas vacías
     },
-  
   }
 }, {
   tableName: 'partner',

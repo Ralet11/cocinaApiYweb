@@ -10,17 +10,19 @@ import Ingredient from './ingredients.model.js';
 import ProductIngredient from './productIngredient.js';
 import Review from './review.model.js';
 
-// Relaciones
+// ======================
+//   Relaciones
+// ======================
 
-// User - Order
+// 1. User <-> Order (1:N)
 User.hasMany(Order, { foreignKey: 'user_id' });
 Order.belongsTo(User, { foreignKey: 'user_id' });
 
-// Partner - Order
+// 2. Partner <-> Order (1:N)
 Partner.hasMany(Order, { foreignKey: 'partner_id' });
 Order.belongsTo(Partner, { foreignKey: 'partner_id' });
 
-// Product - Category (Muchos a muchos)
+// 3. Product <-> Category (N:M a través de CategoryProducts)
 Product.belongsToMany(Category, {
   through: CategoryProducts,
   foreignKey: 'product_id',
@@ -32,7 +34,7 @@ Category.belongsToMany(Product, {
   otherKey: 'product_id',
 });
 
-// Order - Product (Muchos a muchos)
+// 4. Order <-> Product (N:M a través de OrderProducts)
 Order.belongsToMany(Product, {
   through: OrderProducts,
   foreignKey: 'order_id',
@@ -44,7 +46,32 @@ Product.belongsToMany(Order, {
   otherKey: 'order_id',
 });
 
-// Partner - Product (Muchos a muchos)
+/*
+  ADEMÁS de la relación N:M, para poder incluir `OrderProducts` directamente con `include`,
+  definimos también la relación 1:N entre Order y OrderProducts:
+*/
+
+// Order <-> OrderProducts (1:N)
+Order.hasMany(OrderProducts, {
+  foreignKey: 'order_id',
+  as: 'order_products',
+});
+OrderProducts.belongsTo(Order, {
+  foreignKey: 'order_id',
+  as: 'order',
+});
+
+// Product <-> OrderProducts (1:N)
+Product.hasMany(OrderProducts, {
+  foreignKey: 'product_id',
+  as: 'product_orders',
+});
+OrderProducts.belongsTo(Product, {
+  foreignKey: 'product_id',
+  as: 'product',
+});
+
+// 5. Partner <-> Product (N:M a través de PartnerProducts)
 Partner.belongsToMany(Product, {
   through: PartnerProducts,
   foreignKey: 'partner_id',
@@ -56,7 +83,7 @@ Product.belongsToMany(Partner, {
   otherKey: 'partner_id',
 });
 
-// Product - Ingredient (Muchos a muchos)
+// 6. Product <-> Ingredient (N:M a través de ProductIngredient)
 Product.belongsToMany(Ingredient, {
   through: ProductIngredient,
   foreignKey: 'product_id',
@@ -70,21 +97,21 @@ Ingredient.belongsToMany(Product, {
 ProductIngredient.belongsTo(Ingredient, { foreignKey: 'ingredient_id' });
 ProductIngredient.belongsTo(Product, { foreignKey: 'product_id' });
 
-// Review - Order
-Order.hasOne(Review, { foreignKey: 'order_id', as: 'reviews' }); // Relación corregida
-Review.belongsTo(Order, { foreignKey: 'order_id', as: 'order' }); // Relación corregida
+// 7. Order <-> Review (1:1)
+Order.hasOne(Review, { foreignKey: 'order_id', as: 'reviews' });
+Review.belongsTo(Order, { foreignKey: 'order_id', as: 'order' });
 
-// Relación entre Review y Partner (un partner puede tener muchas reviews)
-Partner.hasMany(Review, { foreignKey: 'partnerId', as: 'partnerReviews' }); // Alias modificado
+// 8. Partner <-> Review (1:N)
+Partner.hasMany(Review, { foreignKey: 'partnerId', as: 'partnerReviews' });
 Review.belongsTo(Partner, { foreignKey: 'partnerId', as: 'partner' });
 
-// Relación entre Review y User (un usuario puede tener muchas reviews)
-User.hasMany(Review, { foreignKey: 'userId', as: 'userReviews' }); // Alias modificado
+// 9. User <-> Review (1:N)
+User.hasMany(Review, { foreignKey: 'userId', as: 'userReviews' });
 Review.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
-
-
-// Exportar todos los modelos
+// ======================
+//   Exportar modelos
+// ======================
 export {
   User,
   Order,
