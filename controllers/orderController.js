@@ -1,7 +1,7 @@
 
 import { Order, Product } from '../models/index.models.js';
 import OrderProducts from '../models/orderProducts.model.js'
-
+import { getIo } from '../socket.js';
 
 const getAllOrders = async (req, res) => {
   try {
@@ -113,6 +113,7 @@ const createOrder = async (req, res) => {
 
 
 const updateOrder = async (req, res) => {
+
   try {
     // 1. Buscamos la orden junto con sus asociaciones
     const record = await Order.findByPk(req.params.id, {
@@ -156,8 +157,10 @@ const updateOrder = async (req, res) => {
     });
 
     if (estadoPrevio !== record.status) {
-      const io = req.app.get("io");
-      io.emit("state changed", record); // emite una señal a todos los clientes conectados al socket
+
+      console.log("enviando socket: state change")
+     const io = getIo()
+      io.emit("state changed", { status: record.status, orderId: record.id }); // emite una señal a todos los clientes conectados al socket
     }
     // 5. Finalmente, enviamos la orden actualizada con todas las asociaciones
     return res.json(record);
