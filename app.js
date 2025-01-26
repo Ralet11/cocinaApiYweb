@@ -14,13 +14,20 @@ import orderProductsRouter from "./routes/order_productsRoutes.js";
 import partnerProductsRouter from "./routes/partner_productsRoutes.js";
 import ingredientRouter from "./routes/ingredientsRoutes.js"
 import paymentRouter from "./routes/paymentRoutes.js"
-
-//hoy
+import { Server } from "socket.io";
 import reviewRouter from "./routes/reviewRoutes.js";
+import http from "http";
 
 
 
 const app = express();
+
+//configuramos socket.io
+const server= http.createServer(app) //crear un servidor http con express
+const io= new Server(server,{cors:{origin:"http://localhost:5173",methods:["GET","POST","PUT","DELETE"]}});
+app.set("io",io);
+
+
 
 // Middlewares
 app.use(morgan("dev"));
@@ -38,6 +45,13 @@ app.get("/", (req, res) => {
     console.log("Petición aceptada en server");
 });
 
+io.on("connection", (socket) => {
+    console.log(`Cliente conectado: ${socket.id}`);
+  
+    socket.on("disconnect", () => {
+      console.log(`Cliente desconectado: ${socket.id}`);
+    });
+  });
 app.use((req, res, next) => {
     console.log(`Request: ${req.method} ${req.url}`);
     next();
@@ -68,7 +82,7 @@ app.use("/api/review", reviewRouter)
 // Configurar servidor
 const PORT = 3000;
 
-sequelize.sync({ alter: true })
+sequelize.sync({ force:false })
     .then(() => {
         app.listen(PORT, () => {
             console.log(`Servidor corriendo en http://localhost:${PORT}`);

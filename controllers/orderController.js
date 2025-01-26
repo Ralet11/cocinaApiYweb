@@ -2,6 +2,7 @@
 import { Order, Product } from '../models/index.models.js';
 import OrderProducts from '../models/orderProducts.model.js'
 
+
 const getAllOrders = async (req, res) => {
   try {
     const records = await Order.findAll();
@@ -133,7 +134,7 @@ const updateOrder = async (req, res) => {
     if (!record) {
       return res.status(404).json({ error: 'Order no encontrado' });
     }
-
+    const estadoPrevio=record.status;
     // 3. Actualizamos los campos de la orden
     await record.update(req.body);
 
@@ -154,6 +155,10 @@ const updateOrder = async (req, res) => {
       ],
     });
 
+    if (estadoPrevio !== record.status) {
+      const io = req.app.get("io");
+      io.emit("state changed", record); // emite una señal a todos los clientes conectados al socket
+    }
     // 5. Finalmente, enviamos la orden actualizada con todas las asociaciones
     return res.json(record);
   } catch (error) {

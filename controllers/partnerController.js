@@ -138,7 +138,7 @@ export const requestPartner = async (req, res) => {
 export const registerPartner = async (req, res) => {
 
 
-  const { name, lastName, email, password, birthdate, latitude, longitude } = req.body;
+  const { name, lastName, email, password, birthdate, latitude, longitude,address } = req.body;
 
   try {
     // Verificar si el email ya está registrado
@@ -159,6 +159,7 @@ export const registerPartner = async (req, res) => {
       birthdate,
       latitude,
       longitude,
+      address
     });
 
     // Generar un token JWT
