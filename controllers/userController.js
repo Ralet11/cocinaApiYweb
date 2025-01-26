@@ -4,7 +4,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken'; // Si no está importado, agrega esta línea
 import Address from '../models/Addresses.model.js';
 
-const SECRET_KEY = "tu_clave_secreta"; // Asegúrate de definir tu clave secreta
+const SECRET_KEY = process.env.JWT_SECRET || "tu_clave_secreta";
 
 const getAllUsers = async (req, res) => {
   try {
@@ -77,8 +77,7 @@ const loginUser = async (req, res) => {
     // Generar token JWT
     const token = jwt.sign(
       { id: user.id, email: user.email },
-      SECRET_KEY,
-      { expiresIn: '1h' } // Expiración del token
+      SECRET_KEY
     );
 
     // Enviar respuesta con usuario y token

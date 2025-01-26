@@ -6,6 +6,7 @@ import {
   updateOrder,
   deleteOrder,
   getAllOrdersByPartner,
+  getAllOrdersByUser
 } from '../controllers/orderController.js';
 import { validateToken } from '../middlewares/authMiddleware.js';
 
@@ -17,5 +18,6 @@ router.post('/', createOrder);
 router.put('/:id', updateOrder);
 router.delete('/:id', deleteOrder);
 router.get('/partner/orders', validateToken, getAllOrdersByPartner);
+router.get('/getAllByUser/:userId', getAllOrdersByUser);
 
 export default router;
