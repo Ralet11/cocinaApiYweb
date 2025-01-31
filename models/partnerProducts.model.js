@@ -22,6 +22,10 @@ const PartnerProducts = sequelize.define('partner_products', {
       model: 'partner',
       key: 'id'
     }
+  },
+  inStock: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
   }
 }, {
   tableName: 'partner_products',

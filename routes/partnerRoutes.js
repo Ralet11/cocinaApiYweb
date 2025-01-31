@@ -8,27 +8,45 @@ import {
   getPartnerProducts, 
   loginPartner,
   registerPartner,
-  requestPartner //nueva ruta para enviar solicitud de revision al admin(email)
+  requestPartner,
+  updatePartnerIngredient,
+  getPartnerIngredients,
+  getPartnerProductsApp
 } from '../controllers/partnerController.js';
+
 import { validateToken } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
-// Rutas públicas
+// ─────────────────────────────────────────────────────────────────────────────
+// 🔓 RUTAS PÚBLICAS (No requieren autenticación)
+// ─────────────────────────────────────────────────────────────────────────────
 router.post('/login', loginPartner);
 router.post('/register', registerPartner);
-router.post("/request", requestPartner);
+router.post('/request', requestPartner);
 
-// Rutas protegidas con validateToken
+// ─────────────────────────────────────────────────────────────────────────────
+// 🔐 RUTAS PRIVADAS (Requieren autenticación con validateToken)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// 📌 Productos del partner
+router.get('/products', validateToken, getPartnerProducts);
+router.get('/:id/products', validateToken, getPartnerProductsApp);
+
+// 📌 Ingredientes del partner
+router.put('/updateIngredient', validateToken, updatePartnerIngredient);
+router.get('/partnerIngredient', validateToken, getPartnerIngredients)
+// 📌 Información y gestión de partners
 router.get('/', validateToken, getAllPartners);
 router.get('/:id', validateToken, getPartnerById);
 router.put('/update', validateToken, updatePartner);
 router.delete('/:id', validateToken, deletePartner);
 
-// Nueva ruta: Obtener el partner más cercano basado en latitud, longitud y dirección
-router.post('/closest', validateToken, getClosestPartner);
 
-// Nueva ruta: Obtener los productos de un partner por su ID
-router.get('/:id/products', validateToken, getPartnerProducts);
+
+
+
+// 📌 Partner más cercano
+router.post('/closest', validateToken, getClosestPartner);
 
 export default router;

@@ -9,6 +9,7 @@ import PartnerProducts from './partnerProducts.model.js';
 import Ingredient from './ingredients.model.js';
 import ProductIngredient from './productIngredient.js';
 import Review from './review.model.js';
+import PartnerIngredient from './partnerIngredient.model.js';
 
 // ======================
 //   Relaciones
@@ -94,6 +95,7 @@ Ingredient.belongsToMany(Product, {
   foreignKey: 'ingredient_id',
   otherKey: 'product_id',
 });
+// Relaciones directas del pivot ProductIngredient a Product/Ingredient
 ProductIngredient.belongsTo(Ingredient, { foreignKey: 'ingredient_id' });
 ProductIngredient.belongsTo(Product, { foreignKey: 'product_id' });
 
@@ -108,6 +110,26 @@ Review.belongsTo(Partner, { foreignKey: 'partnerId', as: 'partner' });
 // 9. User <-> Review (1:N)
 User.hasMany(Review, { foreignKey: 'userId', as: 'userReviews' });
 Review.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
+// 10. Partner <--> Ingredient (N:M a través de PartnerIngredient)
+Partner.belongsToMany(Ingredient, { 
+  through: PartnerIngredient,
+  foreignKey: 'partner_id',
+  otherKey: 'ingredient_id'
+});
+Ingredient.belongsToMany(Partner, {
+  through: PartnerIngredient,
+  foreignKey: 'ingredient_id',
+  otherKey: 'partner_id'
+});
+
+// ⚠️ MUY IMPORTANTE: para poder hacer "include: [ { model: Ingredient } ]" desde PartnerIngredient
+PartnerIngredient.belongsTo(Partner,   { foreignKey: 'partner_id' });
+PartnerIngredient.belongsTo(Ingredient,{ foreignKey: 'ingredient_id' });
+
+// (Opcional, pero recomendable para consultas directas)
+Partner.hasMany(PartnerIngredient,     { foreignKey: 'partner_id' });
+Ingredient.hasMany(PartnerIngredient,  { foreignKey: 'ingredient_id' });
 
 // ======================
 //   Exportar modelos
@@ -124,4 +146,5 @@ export {
   Ingredient,
   ProductIngredient,
   Review,
+  PartnerIngredient
 };

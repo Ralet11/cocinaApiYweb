@@ -96,14 +96,17 @@ const createOrder = async (req, res) => {
       },
       removedIngredients: item.removedIngredients || null
     }));
-    
+
     await OrderProducts.bulkCreate(orderProducts);
 
-    // 4) Responder
+    const io = getIo()
+    io.emit('newOrder');
+
+    // 5) Responder al cliente
     res.status(201).json({
       message: 'Order created successfully',
       order: newOrder,
-      orderProducts,
+      orderProducts
     });
   } catch (error) {
     console.error('Error creating order:', error);

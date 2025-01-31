@@ -1,4 +1,4 @@
-import { Category, Partner, Product } from '../models/index.models.js';
+import { Category, Partner, Product, PartnerIngredient, Ingredient, PartnerProducts, ProductIngredient } from '../models/index.models.js';
 import { getDistance } from 'geolib';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
@@ -262,45 +262,38 @@ const getClosestPartner = async (req, res) => {
 // Obtener los productos de un partner específico por ID
 
 const getPartnerProducts = async (req, res) => {
-  try {
-    const partnerId = req.params.id;
 
-    // Buscar el Partner con sus productos y categorías relacionadas
+  
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(400).json({ error: 'No hay información de usuario válida en el token.' });
+    }
+    const partnerId = req.user.id;
     const partner = await Partner.findByPk(partnerId, {
       include: [
         {
           model: Product,
-          attributes: ['id', 'name', 'price', 'img', 'discount', 'description'], // Asegúrate de incluir "description"
-          through: { attributes: [] }, // Ignorar atributos de la tabla intermedia
+          attributes: ['id', 'name', 'price', 'img', 'discount', 'description'],
+          through: { attributes: ['inStock'] },
           include: [
             {
               model: Category,
-              attributes: ['id', 'name'], // Traer solo los atributos necesarios de las categorías
-              through: { attributes: [] } // Ignorar atributos de la tabla intermedia
+              attributes: ['id', 'name'],
+              through: { attributes: [] }
             }
           ]
         }
       ]
     });
-
     if (!partner) {
       return res.status(404).json({ error: 'Partner no encontrado' });
     }
-
-
-
-    // Verificar si el partner tiene productos
     if (!partner.products || partner.products.length === 0) {
-      return res.json({
-        partner: partner.name,
-        cat: {} // Devolver categorías vacías
-      });
+      return res.json({ partner: partner.name, cat: {} });
     }
-
-    // Agrupar productos por categorías
     const groupedProducts = {};
     partner.products.forEach((product) => {
- 
+      const productInStock = product.partner_products?.inStock ?? true;
       if (product.categories && product.categories.length > 0) {
         product.categories.forEach((category) => {
           if (!groupedProducts[category.name]) {
@@ -312,23 +305,162 @@ const getPartnerProducts = async (req, res) => {
             price: product.price,
             img: product.img,
             discount: product.discount,
-            description: product.description // Asegurarte de que este campo sea incluido
+            description: product.description,
+            inStock: productInStock
           });
         });
       }
     });
-
-    console.log(groupedProducts, "qui1")
-    // Respuesta con el nombre del partner y los productos agrupados
-    return res.json({
-      partner: partner.name,
-      cat: groupedProducts
-    });
+    return res.json({ partner: partner.name, cat: groupedProducts });
   } catch (error) {
-    console.error(error);
     return res.status(500).json({ error: 'Error al obtener los productos del partner' });
   }
 };
+
+
+const getPartnerProductsApp = async (req, res) => {
+
+  
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(400).json({ error: 'No hay información de usuario válida en el token.' });
+    }
+    const partnerId = req.params.id;
+    const partner = await Partner.findByPk(partnerId, {
+      include: [
+        {
+          model: Product,
+          attributes: ['id', 'name', 'price', 'img', 'discount', 'description'],
+          through: { attributes: ['inStock'] },
+          include: [
+            {
+              model: Category,
+              attributes: ['id', 'name'],
+              through: { attributes: [] }
+            }
+          ]
+        }
+      ]
+    });
+    if (!partner) {
+      return res.status(404).json({ error: 'Partner no encontrado' });
+    }
+    if (!partner.products || partner.products.length === 0) {
+      return res.json({ partner: partner.name, cat: {} });
+    }
+    const groupedProducts = {};
+    partner.products.forEach((product) => {
+      const productInStock = product.partner_products?.inStock ?? true;
+      if (product.categories && product.categories.length > 0) {
+        product.categories.forEach((category) => {
+          if (!groupedProducts[category.name]) {
+            groupedProducts[category.name] = [];
+          }
+          groupedProducts[category.name].push({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            img: product.img,
+            discount: product.discount,
+            description: product.description,
+            inStock: productInStock
+          });
+        });
+      }
+    });
+    return res.json({ partner: partner.name, cat: groupedProducts });
+  } catch (error) {
+    return res.status(500).json({ error: 'Error al obtener los productos del partner' });
+  }
+};
+
+ const updatePartnerIngredient = async (req, res) => {
+  try {
+    const partner_id = req.user.id;
+    const { ingredient_id, inStock } = req.body;
+    const [updatedCount] = await PartnerIngredient.update(
+      { inStock },
+      { where: { partner_id, ingredient_id } }
+    );
+    if (updatedCount === 0) {
+      return res.status(404).json({ message: 'No se encontró la relación partner-ingredient.' });
+    }
+    if (!inStock) {
+      const productIngredients = await ProductIngredient.findAll({ where: { ingredient_id } });
+      const productIds = productIngredients.map(pi => pi.product_id);
+      await PartnerProducts.update(
+        { inStock: false },
+        { where: { partner_id, product_id: productIds } }
+      );
+    } else {
+      const productIngredients = await ProductIngredient.findAll({ where: { ingredient_id } });
+      const productIds = productIngredients.map(pi => pi.product_id);
+      for (const pId of productIds) {
+        const allIngredients = await ProductIngredient.findAll({ where: { product_id: pId } });
+        const ingIds = allIngredients.map(i => i.ingredient_id);
+        const totalIngredients = ingIds.length;
+        const inStockCount = await PartnerIngredient.count({
+          where: { partner_id, ingredient_id: ingIds, inStock: true }
+        });
+        if (totalIngredients === inStockCount) {
+          await PartnerProducts.update(
+            { inStock: true },
+            { where: { partner_id, product_id: pId } }
+          );
+        }
+      }
+    }
+    return res.status(200).json({ message: 'PartnerIngredient actualizado con éxito.' });
+  } catch (error) {
+    return res.status(500).json({ message: 'Error en el servidor.' });
+  }
+};
+
+
+
+
+
+
+
+
+
+// Obtener todos los ingredientes del partner autenticado
+const getPartnerIngredients = async (req, res) => {
+  console.log("inged"); // Para comprobar que llega
+  try {
+    const partner_id = req.user.id; // Obtenemos el ID del partner desde el token
+
+    // Buscar todos los ingredientes que tiene este partner en la tabla `partner_ingredient`
+    const partnerIngredients = await PartnerIngredient.findAll({
+      where: { partner_id },
+      include: [
+        {
+          model: Ingredient, // Incluimos detalles del ingrediente
+          attributes: ['id', 'name'],
+        },
+      ],
+    });
+
+    // Si no se encuentran registros
+    if (!partnerIngredients.length) {
+      return res.status(404).json({ message: 'No hay ingredientes registrados para este partner.' });
+    }
+
+    // Formateamos la respuesta para devolver: { id, name, inStock }
+    const ingredients = partnerIngredients.map((pi) => ({
+      id: pi.ingredient.id,
+      name: pi.ingredient.name,
+      inStock: pi.inStock,
+    }));
+
+    return res.status(200).json(ingredients);
+  } catch (error) {
+    console.error('Error al obtener ingredientes del partner:', error);
+    return res.status(500).json({ message: 'Error en el servidor.' });
+  }
+};
+
+
 export {
   getAllPartners,
   getPartnerById,
@@ -336,4 +468,7 @@ export {
   deletePartner,
   getClosestPartner,
   getPartnerProducts,
+  updatePartnerIngredient,
+  getPartnerIngredients,
+  getPartnerProductsApp
 };

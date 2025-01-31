@@ -58,9 +58,9 @@ app.use("/api/payment", paymentRouter)
 app.use("/api/review", reviewRouter)
 
 app.use((err, req, res, next) => {
-    console.error('Error global:', err);
-    res.status(500).json({ message: 'Error interno del servidor' });
-  });
+  console.error("→ [GLOBAL ERROR HANDLER]", err);
+  res.status(500).json({ error: "Algo salió mal en el servidor." });
+});
 
 //hoy
 app.use("/api/review", reviewRouter)
@@ -68,7 +68,7 @@ app.use("/api/review", reviewRouter)
 
 // Configurar servidor
 
-sequelize.sync({ force: false }).then(() => {
+sequelize.sync({ alter: true }).then(() => {
   
     const httpsServer = http.createServer( app);
     httpsServer.listen(3000, () => {
