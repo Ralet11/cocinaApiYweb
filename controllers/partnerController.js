@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import nodemailer from 'nodemailer';
 import fs from "fs";
 import path from "path";
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 
 const SECRET_KEY = process.env.JWT_SECRET || "tu_clave_secreta";
@@ -417,13 +418,6 @@ const getPartnerProductsApp = async (req, res) => {
 };
 
 
-
-
-
-
-
-
-
 // Obtener todos los ingredientes del partner autenticado
 const getPartnerIngredients = async (req, res) => {
   console.log("inged"); // Para comprobar que llega
@@ -457,6 +451,63 @@ const getPartnerIngredients = async (req, res) => {
   } catch (error) {
     console.error('Error al obtener ingredientes del partner:', error);
     return res.status(500).json({ message: 'Error en el servidor.' });
+  }
+};
+
+export const requestPasswordReset = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+      const partner = await Partner.findOne({ where: { email } });
+      if (!partner) return res.status(404).json({ message: 'No existe una cuenta con este correo' });
+
+      const token = crypto.randomBytes(32).toString('hex');
+      partner.resetToken = token;
+      partner.resetTokenExpiration = Date.now() + 3600000; // 1 hora
+      await partner.save();
+
+      const transporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      });
+
+      const resetUrl = `http://localhost:3000/reset-password/${token}`;
+      await transporter.sendMail({
+          from: process.env.SMTP_USER,
+          to: email,
+          subject: "Recuperación de contraseña",
+          html: `<p>Haz clic en el siguiente enlace para restablecer tu contraseña:</p>
+                 <a href="${resetUrl}">${resetUrl}</a>
+                 <p>Este enlace expira en 1 hora.</p>`
+      });
+
+      res.json({ message: 'Correo de recuperación enviado' });
+
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Error en el servidor' });
+  }
+};
+
+// 📌 Restablecer contraseña
+export const resetPassword = async (req, res) => {
+  const { token } = req.params;
+  const { password } = req.body;
+
+  try {
+      const partner = await Partner.findOne({ where: { resetToken: token, resetTokenExpiration: { [Op.gt]: Date.now() } } });
+      if (!partner) return res.status(400).json({ message: 'Token inválido o expirado' });
+
+      partner.password = await bcrypt.hash(password, 10);
+      partner.resetToken = null;
+      partner.resetTokenExpiration = null;
+      await partner.save();
+
+      res.json({ message: 'Contraseña actualizada correctamente' });
+
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Error en el servidor' });
   }
 };
 

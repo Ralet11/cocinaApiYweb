@@ -3,6 +3,9 @@ import { User } from '../models/index.models.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken'; // Si no está importado, agrega esta línea
 import Address from '../models/Addresses.model.js';
+import crypto from 'crypto';
+import { Op } from 'sequelize';
+import nodemailer from 'nodemailer';
 
 const SECRET_KEY = process.env.JWT_SECRET || "tu_clave_secreta";
 
@@ -215,6 +218,66 @@ const deleteAddress = async (req, res) => {
     res.status(500).json({ error: 'Error al eliminar la dirección' });
   }
 };
+
+// 📌 Solicitar recuperación de contraseña
+export const requestPasswordReset = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+      const user = await User.findOne({ where: { email } });
+      if (!user) return res.status(404).json({ message: 'No existe una cuenta con este correo' });
+
+      // Generar token de recuperación con expiracion de 1 hs
+      const token = crypto.randomBytes(32).toString('hex');
+      user.resetToken = token;
+      user.resetTokenExpiration = Date.now() + 3600000; // 1 hora
+      await user.save();
+
+      const transporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      });
+
+      const resetUrl = `http://localhost:3000/reset-password/${token}`;
+      await transporter.sendMail({
+          from: process.env.SMTP_USER,
+          to: email,
+          subject: "Recuperación de contraseña",
+          html: `<p>Haz clic en el siguiente enlace para restablecer tu contraseña:</p>
+                 <a href="${resetUrl}">${resetUrl}</a>
+                 <p>Este enlace expira en 1 hora.</p>`
+      });
+
+      res.json({ message: 'Correo de recuperación enviado' });
+
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Error en el servidor' });
+  }
+};
+
+// 📌 Restablecer contraseña
+export const resetPassword = async (req, res) => {
+  const { token } = req.params;  //traemos el toquen de la resetURL
+  const { password } = req.body;
+
+  try {
+      const user = await User.findOne({ where: { resetToken: token, resetTokenExpiration: { [Op.gt]: Date.now() } } });
+      if (!user) return res.status(400).json({ message: 'Token inválido o expirado' });
+
+      user.password = await bcrypt.hash(password, 10);
+      user.resetToken = null;
+      user.resetTokenExpiration = null;
+      await user.save();
+
+      res.json({ message: 'Contraseña actualizada correctamente' });
+
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Error en el servidor' });
+  }
+};
+
 
 export {
   getAllUsers,

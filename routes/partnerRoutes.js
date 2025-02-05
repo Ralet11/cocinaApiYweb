@@ -11,7 +11,9 @@ import {
   requestPartner,
   updatePartnerIngredient,
   getPartnerIngredients,
-  getPartnerProductsApp
+  getPartnerProductsApp,
+  requestPasswordReset,
+  resetPassword
 } from '../controllers/partnerController.js';
 
 import { validateToken } from '../middlewares/authMiddleware.js';
@@ -24,6 +26,8 @@ const router = express.Router();
 router.post('/login', loginPartner);
 router.post('/register', registerPartner);
 router.post('/request', requestPartner);
+router.post('/forgot-password', requestPasswordReset);
+router.post('/reset-password/:token', resetPassword);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 🔐 RUTAS PRIVADAS (Requieren autenticación con validateToken)

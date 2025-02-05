@@ -30,7 +30,15 @@ const User = sequelize.define('user', {
     validate: {
       notEmpty: true
     },
-  }
+  },
+  resetToken: {
+    type: DataTypes.STRING, // Almacena el token de recuperación
+    allowNull: true
+},
+  resetTokenExpiration: {
+    type: DataTypes.DATE, // Almacena la fecha de expiración del token
+    allowNull: true
+}
 }, {
   tableName: 'user',
   timestamps: true

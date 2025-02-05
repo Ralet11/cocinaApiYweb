@@ -9,7 +9,9 @@ import {
   registerUser,
   getAddressesByUser,
   createAddress,
-  deleteAddress
+  deleteAddress,
+  requestPasswordReset,
+  resetPassword
 } from '../controllers/userController.js';
 import { validateToken } from '../middlewares/authMiddleware.js';
 
@@ -27,6 +29,8 @@ router.use((req, res, next) => {
 // Rutas públicas
 router.post('/login', loginUser);
 router.post('/register', registerUser);
+router.post('/forgot-password', requestPasswordReset);
+router.post('/reset-password/:token', resetPassword);
 
 // Rutas protegidas
 router.get('/', getAllUsers);

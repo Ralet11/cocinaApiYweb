@@ -42,7 +42,15 @@ const Partner = sequelize.define('partner', {
     validate: {
       notEmpty: true, // No permite contraseñas vacías
     },
-  }
+  },
+  resetToken: {
+    type: DataTypes.STRING, // Almacena el token de recuperación
+    allowNull: true
+},
+  resetTokenExpiration: {
+    type: DataTypes.DATE, // Almacena la fecha de expiración del token
+    allowNull: true
+}
 }, {
   tableName: 'partner',
   timestamps: true
