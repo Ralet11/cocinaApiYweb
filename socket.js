@@ -13,6 +13,13 @@ const initializeSocket = (server) => {
 
   io.on("connection", (socket) => {
     console.log("Cliente WebSocket conectado.");
+  
+    // Escucha el evento que el cliente usa para unirse a la room
+    socket.on("joinRoom", (userId) => {
+      console.log(`Usuario con ID ${userId} se une a la room ${userId}.`);
+      socket.join(userId);
+    });
+  
     socket.on("disconnect", () => {
       console.log("Cliente WebSocket desconectado.");
     });

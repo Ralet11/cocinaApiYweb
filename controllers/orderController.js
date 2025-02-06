@@ -160,10 +160,13 @@ const updateOrder = async (req, res) => {
     });
 
     if (estadoPrevio !== record.status) {
-
-      console.log("enviando socket: state change")
-     const io = getIo()
-      io.emit("state changed", { status: record.status, orderId: record.id }); // emite una señal a todos los clientes conectados al socket
+      console.log("enviando socket: state change");
+      const io = getIo();
+      // Si quieres mandar el update solo al usuario dueño:
+      io.to(record.user_id).emit("state changed", {
+        status: record.status,
+        orderId: record.id,
+      });
     }
     // 5. Finalmente, enviamos la orden actualizada con todas las asociaciones
     return res.json(record);

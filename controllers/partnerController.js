@@ -8,6 +8,7 @@ import fs from "fs";
 import path from "path";
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
+import { Op } from 'sequelize';
 
 const SECRET_KEY = process.env.JWT_SECRET || "tu_clave_secreta";
 
@@ -456,7 +457,7 @@ const getPartnerIngredients = async (req, res) => {
 
 export const requestPasswordReset = async (req, res) => {
   const { email } = req.body;
-
+  console.log(email, "body")
   try {
       const partner = await Partner.findOne({ where: { email } });
       if (!partner) return res.status(404).json({ message: 'No existe una cuenta con este correo' });
@@ -471,7 +472,7 @@ export const requestPasswordReset = async (req, res) => {
           auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
       });
 
-      const resetUrl = `http://localhost:3000/reset-password/${token}`;
+      const resetUrl = `http://localhost:5173/reset-password/${token}`;
       await transporter.sendMail({
           from: process.env.SMTP_USER,
           to: email,
