@@ -15,6 +15,7 @@ import {
   requestPasswordReset,
   resetPassword
 } from '../controllers/partnerController.js';
+import { getPartnerStatistics } from '../controllers/statisticsController.js';
 
 import { validateToken } from '../middlewares/authMiddleware.js';
 
@@ -47,7 +48,8 @@ router.put('/update', validateToken, updatePartner);
 router.delete('/:id', validateToken, deletePartner);
 
 
-
+//estadisticas del partner
+router.get('/:id/statistics', getPartnerStatistics);
 
 
 // 📌 Partner más cercano
