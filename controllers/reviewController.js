@@ -20,9 +20,9 @@ export const getReviewById = async (req, res) => {
   }
 };
 
-//endponit para que los usuarios puedan ver sus reviews
+
 export const getUserReviews = async (req, res) => {
-  const userId = req.user.id; // Suponiendo que tienes middleware de autenticación
+  const userId = req.user.id; 
 
   try {
     const reviews = await Review.findAll({
@@ -40,7 +40,7 @@ export const getUserReviews = async (req, res) => {
   }
 };
 
-//endpoint para obtener las reviews de un partner
+
 export const getPartnerReviews = async (req, res) => {
   const { partnerId } = req.params;
 

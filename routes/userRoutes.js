@@ -17,30 +17,21 @@ import { validateToken } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
-// Middleware de autenticación, excluyendo las rutas de login y register
-router.use((req, res, next) => {
-  // Excluir rutas específicas
-  if (req.path === '/login' || req.path === '/register') {
-    return next(); // No aplicar el middleware aquí
-  }
-  validateToken(req, res, next); // Aplicar middleware a todas las demás rutas
-});
-
-// Rutas públicas
+// Rutas públicas (NO requieren token)
 router.post('/login', loginUser);
 router.post('/register', registerUser);
 router.post('/forgot-password', requestPasswordReset);
 router.post('/reset-password/:token', resetPassword);
 
-// Rutas protegidas
-router.get('/', getAllUsers);
-router.get('/:id', getUserById);
-router.post('/', createUser);
-router.put('/:id', updateUser);
-router.delete('/:id', deleteUser);
-router.get('/getAllAddress/:userId', getAddressesByUser);
-router.post('/addAddress', createAddress);
-router.get('/getAddress/addressId', getAddressesByUser);
-router.delete('/deleteAddress/:id', deleteAddress);
+// Rutas protegidas (SÍ requieren token)
+router.get('/', validateToken, getAllUsers);
+router.get('/:id', validateToken, getUserById);
+router.post('/', validateToken, createUser);
+router.put('/:id', validateToken, updateUser);
+router.delete('/:id', validateToken, deleteUser);
+router.get('/getAllAddress/:userId', validateToken, getAddressesByUser);
+router.post('/addAddress', validateToken, createAddress);
+router.get('/getAddress/addressId', validateToken, getAddressesByUser);
+router.delete('/deleteAddress/:id', validateToken, deleteAddress);
 
 export default router;
