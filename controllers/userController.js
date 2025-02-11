@@ -2,7 +2,7 @@
 import { User } from '../models/index.models.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken'; // Si no está importado, agrega esta línea
-import Address from '../models/Addresses.model.js';
+import Address from '../models/addresses.model.js';
 import crypto from 'crypto';
 import { Op } from 'sequelize';
 import nodemailer from 'nodemailer';
