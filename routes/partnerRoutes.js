@@ -15,7 +15,7 @@ import {
   requestPasswordReset,
   resetPassword
 } from '../controllers/partnerController.js';
-import { getPartnerStatistics } from '../controllers/statisticsController.js';
+import { getPartnerStatistics } from '../controllers/StaticsController.js';
 
 import { validateToken } from '../middlewares/authMiddleware.js';
 
@@ -30,6 +30,9 @@ router.post('/request', requestPartner);
 router.post('/requestPasswordReset', requestPasswordReset);
 router.post('/reset-password/:token', resetPassword);
 
+
+
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 🔐 RUTAS PRIVADAS (Requieren autenticación con validateToken)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -37,6 +40,10 @@ router.post('/reset-password/:token', resetPassword);
 // 📌 Productos del partner
 router.get('/products', validateToken, getPartnerProducts);
 router.get('/:id/products', validateToken, getPartnerProductsApp);
+
+
+//estadisticas del partner
+router.get('/statistics',validateToken, getPartnerStatistics);
 
 // 📌 Ingredientes del partner
 router.put('/updateIngredient', validateToken, updatePartnerIngredient);
@@ -48,8 +55,6 @@ router.put('/update', validateToken, updatePartner);
 router.delete('/:id', validateToken, deletePartner);
 
 
-//estadisticas del partner
-router.get('/:id/statistics', getPartnerStatistics);
 
 
 // 📌 Partner más cercano

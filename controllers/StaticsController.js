@@ -2,7 +2,7 @@ import { Order, Review, OrderProducts, PartnerProducts } from '../models/index.m
 import sequelize from 'sequelize';
 
 export const getPartnerStatistics = async (req, res) => {
-    const partnerId = req.params.id;
+    const partnerId = req.user.id;
   
     try {
       // 1. Resumen de Pedidos
