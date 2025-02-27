@@ -28,7 +28,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const { Preference,MercadoPagoConfig } = require('mercadopago');
-const mercado_client = new MercadoPagoConfig(accessToken: process.env.ACCESS_TOKEN);
+const mercado_client = new MercadoPagoConfig({accessToken:process.env.ACCESS_TOKEN});
 const app = express();
 
 
