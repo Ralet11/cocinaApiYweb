@@ -2,6 +2,11 @@ import express from "express";
 import morgan from "morgan";
 import cors from "cors";
 import sequelize from "./database.js";
+import dotenv from "dotenv";
+
+// Carga las variables de entorno desde el archivo .env
+dotenv.config();
+
 
 // Importar rutas
 import userRouter from "./routes/userRoutes.js";
@@ -17,8 +22,13 @@ import paymentRouter from "./routes/paymentRoutes.js"
 import reviewRouter from "./routes/reviewRoutes.js";
 import http from "http";
 import { initializeSocket } from "./socket.js";
+import dotenv from "dotenv";
 
+// Carga las variables de entorno desde el archivo .env
+dotenv.config();
 
+const { Preference,MercadoPagoConfig } = require('mercadopago');
+const mercado_client = new MercadoPagoConfig(accessToken: process.env.ACCESS_TOKEN);
 const app = express();
 
 
@@ -44,6 +54,34 @@ app.use((req, res, next) => {
     next();
   });
 
+  app.post("/create_preference", async (req, res)=> {
+
+    try {
+      const body={
+        items: req.body.map((item) => ({
+          title: item.title,
+          quantity: item.quantity,
+          unit_price: item.price,
+          currency_id: "ARS",
+        })),
+        //crear por las nuestras en frontend
+        back_url:{
+          success: "",
+          failure: "",
+          pending: "",
+        },
+        auto_return:'approved'
+      };
+
+      const preference = new Preference(mercado_client);
+      const result= await preference.create({body});
+      res.json({id:result.id});
+    } catch (error) {
+      console.log(error);
+      res.status(500).send("Error al crear la preferencia");
+    }
+  });
+
 // Rutas
 app.use("/api/user", userRouter);
 app.use("/api/order", orderRouter);
@@ -56,6 +94,8 @@ app.use("/api/partner-products", partnerProductsRouter);
 app.use("/api/ingredient", ingredientRouter)
 app.use("/api/payment", paymentRouter)
 app.use("/api/review", reviewRouter)
+
+
 
 app.use((err, req, res, next) => {
   console.error("→ [GLOBAL ERROR HANDLER]", err);
