@@ -2,11 +2,6 @@ import express from "express";
 import morgan from "morgan";
 import cors from "cors";
 import sequelize from "./database.js";
-import dotenv from "dotenv";
-
-// Carga las variables de entorno desde el archivo .env
-dotenv.config();
-
 
 // Importar rutas
 import userRouter from "./routes/userRoutes.js";
@@ -27,7 +22,7 @@ import dotenv from "dotenv";
 // Carga las variables de entorno desde el archivo .env
 dotenv.config();
 
-const { Preference,MercadoPagoConfig } = require('mercadopago');
+import { Preference,MercadoPagoConfig } from 'mercadopago';
 const mercado_client = new MercadoPagoConfig({accessToken:process.env.ACCESS_TOKEN});
 const app = express();
 
@@ -59,7 +54,7 @@ app.use((req, res, next) => {
     try {
       const body={
         items: req.body.map((item) => ({
-          title: item.title,
+          title: item.name,
           quantity: item.quantity,
           unit_price: item.price,
           currency_id: "ARS",
