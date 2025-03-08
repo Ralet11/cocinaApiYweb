@@ -1,116 +1,86 @@
+// server.js
 import express from "express";
+import http from "http";
+import https from "https";
+import fs from "fs";
 import morgan from "morgan";
 import cors from "cors";
+import dotenv from "dotenv";
 import sequelize from "./database.js";
+import { initializeSocket } from "./socket.js";
 
-// Importar rutas
+// Rutas
 import userRouter from "./routes/userRoutes.js";
 import orderRouter from "./routes/orderRoutes.js";
-import productRouter from "./routes/productRoutes.js";
-import categoryRouter from "./routes/categoryRoutes.js";
-import partnerRouter from "./routes/partnerRoutes.js";
-import categoryProductsRouter from "./routes/category_productsRoutes.js";
-import orderProductsRouter from "./routes/order_productsRoutes.js";
-import partnerProductsRouter from "./routes/partner_productsRoutes.js";
-import ingredientRouter from "./routes/ingredientsRoutes.js"
-import paymentRouter from "./routes/paymentRoutes.js"
-import reviewRouter from "./routes/reviewRoutes.js";
-import http from "http";
-import { initializeSocket } from "./socket.js";
-import dotenv from "dotenv";
+// ... etc
 
-// Carga las variables de entorno desde el archivo .env
-dotenv.config();
+dotenv.config(); // Carga las variables de .env
 
-import { Preference,MercadoPagoConfig } from 'mercadopago';
-const mercado_client = new MercadoPagoConfig({accessToken:process.env.ACCESS_TOKEN});
 const app = express();
-
 
 // Middlewares
 app.use(morgan("dev"));
-
-const corsOptions = {
-    origin: "http://localhost:5173",
-
-};
-app.use(cors(corsOptions));
-
+app.use(cors({ origin: process.env.FRONTEND_URL || "*" }));
 app.use(express.json({ limit: "10mb" }));
 
-// Ruta base de prueba
-app.get("/", (req, res) => {
-    res.send("Petición aceptada");
-    console.log("Petición aceptada en server");
-});
-
-app.use((req, res, next) => {
-    console.log(`Request: ${req.method} ${req.url}`);
-    next();
-  });
-
-  app.post("/create_preference", async (req, res)=> {
-
-    try {
-      const body={
-        items: req.body.map((item) => ({
-          title: item.name,
-          quantity: item.quantity,
-          unit_price: item.price,
-          currency_id: "ARS",
-        })),
-        //crear por las nuestras en frontend
-        back_url:{
-          success: "",
-          failure: "",
-          pending: "",
-        },
-        auto_return:'approved'
-      };
-
-      const preference = new Preference(mercado_client);
-      const result= await preference.create({body});
-      res.json({id:result.id});
-    } catch (error) {
-      console.log(error);
-      res.status(500).send("Error al crear la preferencia");
-    }
-  });
-
 // Rutas
+app.get("/", (req, res) => {
+  res.send("Petición aceptada");
+});
 app.use("/api/user", userRouter);
 app.use("/api/order", orderRouter);
-app.use("/api/product", productRouter);
-app.use("/api/category", categoryRouter);
-app.use("/api/partner", partnerRouter);
-app.use("/api/category-products", categoryProductsRouter);
-app.use("/api/order-products", orderProductsRouter);
-app.use("/api/partner-products", partnerProductsRouter);
-app.use("/api/ingredient", ingredientRouter)
-app.use("/api/payment", paymentRouter)
-app.use("/api/review", reviewRouter)
+// ... etc
 
-
-
+// Manejo de errores
 app.use((err, req, res, next) => {
   console.error("→ [GLOBAL ERROR HANDLER]", err);
   res.status(500).json({ error: "Algo salió mal en el servidor." });
 });
 
-//hoy
-app.use("/api/review", reviewRouter)
+// Sincronizar con Sequelize
+const FORCE_SYNC = process.env.FORCE_SYNC === "true"; // "true" o "false" en .env
+sequelize.sync({ force: FORCE_SYNC })
+  .then(() => {
+    console.log("Base de datos sincronizada");
+    startServer(app);
+  })
+  .catch((error) => {
+    console.error("Unable to synchronize the models:", error);
+  });
 
+/**
+ * startServer: decide si levantar HTTP o HTTPS
+ */
+function startServer(app) {
+  const isProduction = process.env.NODE_ENV === "production";
+  const port = process.env.PORT || 3000;
 
-// Configurar servidor
+  let server;
 
-sequelize.sync({ alter: true }).then(() => {
-  
-    const httpsServer = http.createServer( app);
-    httpsServer.listen(3000, () => {
-      initializeSocket(httpsServer)
-      console.log('Servidor HTTPS está escuchando en el puerto 3000');
-    }); 
-     
-    }).catch(error => {
-      console.error('Unable to synchronize the models:', error);
-    });  
+  if (isProduction) {
+    // Lee certificados de las rutas definidas en .env
+    const keyPath = process.env.SSL_KEY_PATH;
+    const certPath = process.env.SSL_CERT_PATH;
+    const caPath = process.env.SSL_CA_PATH;
+
+    const privateKey = fs.readFileSync(keyPath, "utf8");
+    const certificate = fs.readFileSync(certPath, "utf8");
+    const ca = fs.readFileSync(caPath, "utf8");
+
+    const credentials = { key: privateKey, cert: certificate, ca };
+
+    // Servidor HTTPS
+    server = https.createServer(credentials, app);
+    server.listen(443, () => {
+      console.log("Servidor HTTPS escuchando en el puerto 443");
+      initializeSocket(server);
+    });
+  } else {
+    // Servidor HTTP
+    server = http.createServer(app);
+    server.listen(port, () => {
+      console.log(`Servidor HTTP escuchando en el puerto ${port}`);
+      initializeSocket(server);
+    });
+  }
+}
