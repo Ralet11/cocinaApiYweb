@@ -220,6 +220,8 @@ const deletePartner = async (req, res) => {
 // Obtener el partner más cercano utilizando geolib
 const getClosestPartner = async (req, res) => {
 
+  console.log(req.body, "bod  ")
+
   
   const { latitude, longitude } = req.body.address;
 

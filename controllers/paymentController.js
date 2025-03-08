@@ -8,7 +8,7 @@ const mercado_client = new MercadoPagoConfig({
 });
 
 // Clave secreta de prueba de Stripe
-const stripe = new Stripe("sk_test_51OJV6vCtqRjqS5chtpxR0cKFJLK8jf3WRVchpsfCFZx3JdiyPV0xcHZgYbaJ70XYsmdkssJpHiwdCmEun6X7mThj00IB3NQI0C");
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 /**
  * paymentIntent (Stripe)
