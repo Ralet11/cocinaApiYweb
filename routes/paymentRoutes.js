@@ -5,7 +5,7 @@ import { create_preference, paymentIntent } from '../controllers/paymentControll
 const router = express.Router();
 
 router.post('/intent', paymentIntent);
-router.post('/mp/create-preference', create_preference)
+router.post('/mp/init', create_preference)
 
 
 export default router;
