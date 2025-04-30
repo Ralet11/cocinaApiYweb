@@ -48,7 +48,7 @@ export const getAllOrdersByUser = async (req, res) => {
     return res.status(500).json({ error: 'Error fetching user orders' });
   }
 };
-function unifyItems(items) {
+export function unifyItems(items) {
   const groupedMap = {};
 
   items.forEach((item) => {

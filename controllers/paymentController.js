@@ -1,82 +1,153 @@
-// payment.controller.js
-
+// controllers/paymentController.js
 import Stripe from 'stripe';
 import { Preference, MercadoPagoConfig } from 'mercadopago';
+import dotenv from 'dotenv';
 
-const mercado_client = new MercadoPagoConfig({
-  accessToken: process.env.ACCESS_TOKEN, // Coloca tu Access Token de Mercado Pago
+import sequelize from '../database.js';
+import Order from '../models/order.model.js';
+import OrderProducts from '../models/orderProducts.model.js';
+import { unifyItems } from './orderController.js';
+
+dotenv.config();
+
+/*───────────────────────────────*
+ * SDK CONFIG
+ *───────────────────────────────*/
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const mpClient = new MercadoPagoConfig({
+  accessToken: process.env.ACCESS_TOKEN, // TEST-xxxxxxxxxxxxxxxx
 });
 
-// Clave secreta de prueba de Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-/**
- * paymentIntent (Stripe)
- * 1. Recibe el monto en el body.
- * 2. Crea un Payment Intent en Stripe.
- * 3. Devuelve el clientSecret al frontend.
- */
+/*───────────────────────────────*
+ * 1) STRIPE (sin cambios)
+ *───────────────────────────────*/
 export const paymentIntent = async (req, res) => {
-  const { amount } = req.body;
-  console.log('Stripe paymentIntent body:', req.body);
-
-  if (!amount || typeof amount !== 'number' || amount <= 0) {
-    return res.status(400).json({ error: 'Invalid or missing amount' });
-  }
-
   try {
-    // Stripe exige enteros => multiplica por 100 (centavos) desde el front si lo requieres
-    const paymentIntent = await stripe.paymentIntents.create({
+    const { amount } = req.body;
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ error: 'Invalid amount' });
+    }
+    const intent = await stripe.paymentIntents.create({
       amount: Math.floor(amount),
       currency: 'usd',
-      automatic_payment_methods: {
-        enabled: true,
-      },
+      automatic_payment_methods: { enabled: true },
     });
-
-    return res.json({ clientSecret: paymentIntent.client_secret });
-  } catch (error) {
-    console.error('Stripe Error:', error);
-    return res.status(500).json({ error: 'Payment processing failed. Please try again.' });
+    return res.json({ clientSecret: intent.client_secret });
+  } catch (e) {
+    console.error('Stripe error:', e);
+    return res.status(500).json({ error: 'Stripe error' });
   }
 };
 
-/**
- * create_preference (Mercado Pago)
- * 1. Recibe un array de items en el body (name, quantity, price, currency_id, etc.).
- * 2. Crea una preferencia en MP.
- * 3. Devuelve el `init_point` (o `sandbox_init_point`) y el ID de la preferencia.
- */
-export const create_preference = async (req, res) => {
-  console.log('Mercado Pago create_preference body:', req.body);
+/*───────────────────────────────*
+ * 2) MERCADO PAGO – orden + preferencia
+ *───────────────────────────────*/
+export const initMercadoPago = async (req, res) => {
+  const t = await sequelize.transaction();
   try {
-    // Ojo: se recomienda usar "back_urls" en plural
-    const body = {
-      items: req.body.map((item) => ({
-        title: item.name,
-        quantity: item.quantity,
-        unit_price: item.price,
-        currency_id: "ARS",
-      })),
-      back_urls: {
-        success: "premierburguer://payment-success",
-        failure: "premierburguer://payment-failure",
-        pending: "premierburguer://payment-pending",
+    const { order: orderDTO, items } = req.body;
+    if (!items?.length) {
+      await t.rollback();
+      return res.status(400).json({ error: 'Items missing' });
+    }
+
+    /* 2.1  Orden pendiente */
+    const newOrder = await Order.create(
+      { ...orderDTO, status: 'pendiente' },
+      { transaction: t }
+    );
+
+    /* 2.2  Productos */
+    const rows = unifyItems(items).map((p) => ({
+      order_id: newOrder.id,
+      product_id: p.productId,
+      quantity: p.quantity,
+      price: p.totalPrice,
+      extras: {
+        includedIngredients: p.includedIngredients,
+        extraIngredients: p.extraIngredients,
       },
-      // auto_return: 'approved', // Quitar o poner, pero si lo usas necesita URL HTTPS válida en "success".
+      removedIngredients: p.removedIngredients ?? null,
+    }));
+    await OrderProducts.bulkCreate(rows, { transaction: t });
+    await t.commit();
+
+    /* 2.3  Preferencia */
+    const preference = new Preference(mpClient);
+    const prefBody = {
+      items: [
+        {
+          title: 'Premier Burguer Order',
+          quantity: 1,
+          unit_price: +orderDTO.finalPrice, // number
+          currency_id: 'ARS',
+        },
+      ],
+      back_urls: getMpBackUrls(),
+      external_reference: `${newOrder.id}`,
+      ...(process.env.NODE_ENV === 'production' && {
+        notification_url: `${process.env.API_URL}/payment/webhooks/mercadopago`,
+        auto_return: 'approved',
+      }),
     };
 
-    const preference = new Preference(mercado_client);
-    const result = await preference.create({ body });
+    const prefRes = await preference.create({ body: prefBody });
 
-    // Mercado Pago retorna varias propiedades: init_point, sandbox_init_point...
-    // Si estás en modo Sandbox, usa sandbox_init_point
-    return res.json({
-      id: result.id,
-      init_point: result.init_point, // o result.sandbox_init_point si estás en sandbox
+    return res.status(201).json({
+      orderId: newOrder.id,
+      preferenceId: prefRes.id,
+      init_point:prefRes.init_point,
     });
-  } catch (error) {
-    console.error('Mercado Pago Error:', error);
-    return res.status(500).json({ error: 'Error al crear la preferencia' });
+  } catch (e) {
+    await t.rollback();
+    console.error('MP init error:', e);
+    return res.status(500).json({ error: 'MP init error' });
   }
 };
+
+/*───────────────────────────────*
+ * 3) WEBHOOK – producción
+ *───────────────────────────────*/
+export const mpWebhook = async (req, res) => {
+  try {
+    const { id, topic } = req.body;
+    if (topic !== 'payment') return res.sendStatus(204);
+
+    const payment = await mpClient.get(`/v1/payments/${id}`);
+    const orderId = payment.external_reference;
+
+    const statusMap = {
+      approved: 'aceptada',
+      rejected: 'rechazada',
+      cancelled: 'cancelada',
+      in_process: 'pendiente',
+      pending: 'pendiente',
+    };
+
+    await Order.update(
+      { status: statusMap[payment.status] ?? 'pendiente' },
+      { where: { id: orderId } }
+    );
+    return res.sendStatus(200);
+  } catch (e) {
+    console.error('MP webhook error:', e);
+    return res.sendStatus(500);
+  }
+};
+
+/*───────────────────────────────*
+ * helper para back_urls
+ *───────────────────────────────*/
+function getMpBackUrls() {
+  return process.env.NODE_ENV === 'development'
+    ? {
+        success: 'premierburguer://payment-success',
+        failure: 'premierburguer://payment-failure',
+        pending: 'premierburguer://payment-pending',
+      }
+    : {
+        success: 'https://premierburguer.app/payments/mp/success',
+        failure: 'https://premierburguer.app/payments/mp/failure',
+        pending: 'https://premierburguer.app/payments/mp/pending',
+      };
+}
