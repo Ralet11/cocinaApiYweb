@@ -79,7 +79,7 @@ export const initMercadoPago = async (req, res) => {
         {
           title: 'Premier Burguer Order',
           quantity: 1,
-          unit_price: +orderDTO.finalPrice, // number
+          unit_price: +orderDTO.finalPrice,
           currency_id: 'ARS',
         },
       ],
@@ -88,6 +88,9 @@ export const initMercadoPago = async (req, res) => {
       ...(process.env.NODE_ENV === 'production' && {
         notification_url: `${process.env.API_URL}/payment/webhooks/mercadopago`,
         auto_return: 'approved',
+        payer: {
+          email: "ramiro.alet@gmail.com", // <- debes enviarlo desde el frontend
+        },
       }),
     };
 
