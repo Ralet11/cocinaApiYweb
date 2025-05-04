@@ -65,6 +65,7 @@ app.use("/api/ingredient", ingredientRouter);
 app.use("/api/payment", paymentRouter);
 app.use("/api/review", reviewRouter);
 
+
 // Manejador global de errores
 app.use((err, req, res, next) => {
   console.error("→ [GLOBAL ERROR HANDLER]", err);

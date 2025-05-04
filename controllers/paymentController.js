@@ -1,82 +1,185 @@
-// payment.controller.js
+// controllers/payment.controller.js
+//
+// ▸ paymentIntent .......... Stripe (tarjetas)
+// ▸ create_preference ...... Mercado Pago + creación de Order
+// ▸ mpWebhook .............. Webhook que actualiza el estado de la Order
+//
 
 import Stripe from 'stripe';
-import { Preference, MercadoPagoConfig } from 'mercadopago';
+import {
+  Preference,
+  Payment,
+  MercadoPagoConfig,
+} from 'mercadopago';
 
-const mercado_client = new MercadoPagoConfig({
-  accessToken: process.env.ACCESS_TOKEN, // Coloca tu Access Token de Mercado Pago
+import sequelize from '../database.js';
+import Order from '../models/order.model.js';
+import { getIo } from '../socket.js';     // ajusta la ruta a donde exportes tu instancia
+
+/* ──────────────────────────────── Config ─────────────────────────────── */
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2023-10-16',
 });
 
-// Clave secreta de prueba de Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const mercadoClient = new MercadoPagoConfig({
+  accessToken: process.env.ACCESS_TOKEN,
+});
 
-/**
- * paymentIntent (Stripe)
- * 1. Recibe el monto en el body.
- * 2. Crea un Payment Intent en Stripe.
- * 3. Devuelve el clientSecret al frontend.
- */
+/* ───────────── Generador de código numérico de 6 dígitos ─────────────── */
+async function generateOrderCode() {
+  let code, exists = true;
+  while (exists) {
+    code = Math.floor(100000 + Math.random() * 900000).toString(); // 100 000‑999 999
+    exists = await Order.findOne({ where: { code } });
+  }
+  return code;
+}
+
+/* ─────────────────────────── Stripe: PaymentIntent ───────────────────── */
 export const paymentIntent = async (req, res) => {
   const { amount } = req.body;
-  console.log('Stripe paymentIntent body:', req.body);
 
   if (!amount || typeof amount !== 'number' || amount <= 0) {
     return res.status(400).json({ error: 'Invalid or missing amount' });
   }
 
   try {
-    // Stripe exige enteros => multiplica por 100 (centavos) desde el front si lo requieres
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.floor(amount),
       currency: 'usd',
-      automatic_payment_methods: {
-        enabled: true,
-      },
+      automatic_payment_methods: { enabled: true },
     });
 
     return res.json({ clientSecret: paymentIntent.client_secret });
   } catch (error) {
     console.error('Stripe Error:', error);
-    return res.status(500).json({ error: 'Payment processing failed. Please try again.' });
+    return res.status(500).json({ error: 'Payment processing failed.' });
   }
 };
 
-/**
- * create_preference (Mercado Pago)
- * 1. Recibe un array de items en el body (name, quantity, price, currency_id, etc.).
- * 2. Crea una preferencia en MP.
- * 3. Devuelve el `init_point` (o `sandbox_init_point`) y el ID de la preferencia.
- */
+/* ───────────────────── Mercado Pago: Preferencia + Order ─────────────── */
 export const create_preference = async (req, res) => {
-  console.log('Mercado Pago create_preference body:', req.body);
+  const { order: orderData, items } = req.body;
+  console.log('MP create_preference body:', req.body);
+
+  if (!orderData || !items?.length)
+    return res.status(400).json({ error: 'Missing order or items' });
+
+  const t = await sequelize.transaction();
   try {
-    // Ojo: se recomienda usar "back_urls" en plural
-    const body = {
-      items: req.body.map((item) => ({
-        title: item.name,
-        quantity: item.quantity,
-        unit_price: item.price,
-        currency_id: "ARS",
-      })),
-      back_urls: {
-        success: "premierburguer://payment-success",
-        failure: "premierburguer://payment-failure",
-        pending: "premierburguer://payment-pending",
+    /* 1️⃣  Código */
+    const code = await generateOrderCode();
+
+    /* 2️⃣  Crear Order */
+    const newOrder = await Order.create(
+      {
+        code,                                 // ← 6 dígitos
+        deliveryAddress: orderData.deliveryAddress,
+        partner_id:      orderData.partner_id ?? null,
+        user_id:         orderData.user_id    ?? null,
+        finalPrice:      orderData.finalPrice,
+        deliveryFee:     orderData.deliveryFee,
+        price:           orderData.price,
+        status:          'pendiente',
       },
-      // auto_return: 'approved', // Quitar o poner, pero si lo usas necesita URL HTTPS válida en "success".
+      { transaction: t },
+    );
+
+    /* 3️⃣  Preferencia */
+    const prefBody = {
+      items: items.map(i => ({
+        title:       i.name,
+        quantity:    i.quantity,
+        unit_price:  i.price,
+        currency_id: i.currency_id || 'ARS',
+      })),
+
+      back_urls: {
+        success: 'premierburguer://payment-success',
+        failure: 'premierburguer://payment-failure',
+        pending: 'premierburguer://payment-pending',
+      },
+      notification_url: `https://4573-200-126-230-108.ngrok-free.app/api/payment/mp/webhook`,
+      auto_return: 'approved',
+      metadata:   { order_id: newOrder.id, code },
     };
 
-    const preference = new Preference(mercado_client);
-    const result = await preference.create({ body });
+    const preference = new Preference(mercadoClient);
+    const prefRes   = await preference.create({ body: prefBody });
 
-    // Mercado Pago retorna varias propiedades: init_point, sandbox_init_point...
-    // Si estás en modo Sandbox, usa sandbox_init_point
+    await t.commit();
+
     return res.json({
-      id: result.id,
-      init_point: result.init_point, // o result.sandbox_init_point si estás en sandbox
+      order: {
+        id:          newOrder.id,
+        code,
+        status:      newOrder.status,
+        finalPrice:  newOrder.finalPrice,
+        deliveryFee: newOrder.deliveryFee,
+        price:       newOrder.price,
+      },
+      preference: {
+        id:         prefRes.id,
+        init_point: prefRes.init_point,  // usa sandbox_init_point en test
+      },
     });
   } catch (error) {
-    console.error('Mercado Pago Error:', error);
-    return res.status(500).json({ error: 'Error al crear la preferencia' });
+    await t.rollback();
+    console.error('MP create_preference Error:', error);
+    return res.status(500).json({ error: 'No se pudo crear la preferencia.' });
+  }
+};
+
+/* ──────────────────────── Webhook Mercado Pago ───────────────────────── */
+export const mpWebhook = async (req, res) => {
+
+  console.log("webhook")
+  // MP espera un 200 rápido
+  res.sendStatus(200);
+
+  try {
+    /* ------ 1. Obtener payment_id según el formato de MP ------------- */
+    let paymentId;
+
+    // Formato nuevo (2024) → JSON body: { type: 'payment', data: { id } }
+    if (req.body?.type === 'payment') {
+      paymentId = req.body.data?.id;
+    }
+
+    // Formato clásico → query: ?topic=payment&id=12345
+    if (req.query.topic === 'payment' && req.query.id) {
+      paymentId = req.query.id;
+    }
+
+    if (!paymentId) return;
+
+    /* ------ 2. Traer el payment completo ----------------------------- */
+    const paymentClient = new Payment(mercadoClient);
+    const { status, metadata } = await paymentClient.get({ id: paymentId });
+
+    if (!metadata?.order_id) return;
+
+    /* ------ 3. Mapear MP → tu enum ----------------------------------- */
+    let newStatus = 'pendiente';
+    if (status === 'approved')  newStatus = 'aceptada';
+    if (status === 'rejected' || status === 'cancelled') newStatus = 'rechazada';
+
+    /* ------ 4. Actualizar Order y notificar via socket --------------- */
+    await Order.update(
+      { status: newStatus },
+      { where: { id: metadata.order_id } },
+    );
+
+    // Emitir a la sala del usuario, si existe
+    const order = await Order.findByPk(metadata.order_id, { attributes: ['user_id'] });
+    if (order?.user_id) {
+      getIo.to(String(order.user_id)).emit('order_state_changed', {
+        orderId: metadata.order_id,
+        status:  newStatus,
+      });
+    }
+  } catch (error) {
+    console.error('MP Webhook Error:', error);
+    // ya respondimos 200, aquí sólo logeamos
   }
 };

@@ -75,6 +75,8 @@ export function unifyItems(items) {
 
 // En tu createOrder
 const createOrder = async (req, res) => {
+
+  console.log(req.body, "body")
   try {
     const { items, ...rest } = req.body;
 
