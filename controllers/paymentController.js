@@ -60,7 +60,7 @@ export const paymentIntent = async (req, res) => {
 /* ───────────────────── Mercado Pago: Preferencia + Order ─────────────── */
 export const create_preference = async (req, res) => {
   const { order: orderData, items } = req.body;
-  console.log('MP create_preference body:', req.body);
+  console.log('orderData', orderData);
 
   if (!orderData || !items?.length)
     return res.status(400).json({ error: 'Missing order or items' });
@@ -99,7 +99,7 @@ export const create_preference = async (req, res) => {
         failure: 'premierburguer://payment-failure',
         pending: 'premierburguer://payment-pending',
       },
-      notification_url: `https://4573-200-126-230-108.ngrok-free.app/api/payment/mp/webhook`,
+      notification_url:'https://2a98-200-126-230-108.ngrok-free.app/api/payment/mp/webhook',
       auto_return: 'approved',
       metadata:   { order_id: newOrder.id, code },
     };
@@ -131,55 +131,50 @@ export const create_preference = async (req, res) => {
 };
 
 /* ──────────────────────── Webhook Mercado Pago ───────────────────────── */
+/* ──────────────────────── Webhook Mercado Pago ────────────────────── */
 export const mpWebhook = async (req, res) => {
-
-  console.log("webhook")
-  // MP espera un 200 rápido
-  res.sendStatus(200);
+  res.sendStatus(200);                     // respuesta rápida
 
   try {
-    /* ------ 1. Obtener payment_id según el formato de MP ------------- */
+    /* 1. paymentId */
     let paymentId;
-
-    // Formato nuevo (2024) → JSON body: { type: 'payment', data: { id } }
-    if (req.body?.type === 'payment') {
-      paymentId = req.body.data?.id;
-    }
-
-    // Formato clásico → query: ?topic=payment&id=12345
-    if (req.query.topic === 'payment' && req.query.id) {
-      paymentId = req.query.id;
-    }
-
+    if (req.body?.type === 'payment')                paymentId = req.body.data?.id;
+    if (req.query.topic === 'payment' && req.query.id) paymentId = req.query.id;
     if (!paymentId) return;
 
-    /* ------ 2. Traer el payment completo ----------------------------- */
+    /* 2. Traer pago */
     const paymentClient = new Payment(mercadoClient);
     const { status, metadata } = await paymentClient.get({ id: paymentId });
-
     if (!metadata?.order_id) return;
 
-    /* ------ 3. Mapear MP → tu enum ----------------------------------- */
+    /* 3. Nuevo estado */
     let newStatus = 'pendiente';
-    if (status === 'approved')  newStatus = 'aceptada';
+    if (status === 'approved')                      newStatus = 'aceptada';
     if (status === 'rejected' || status === 'cancelled') newStatus = 'rechazada';
 
-    /* ------ 4. Actualizar Order y notificar via socket --------------- */
+    /* 4. Actualizar Order */
     await Order.update(
       { status: newStatus },
       { where: { id: metadata.order_id } },
     );
 
-    // Emitir a la sala del usuario, si existe
-    const order = await Order.findByPk(metadata.order_id, { attributes: ['user_id'] });
+    /* 5. Buscar usuario (raw) y emitir socket */
+    const order = await Order.findByPk(metadata.order_id, {
+      attributes: ['user_id'],
+      raw: true,                         // ← objeto plano: { user_id: 1 }
+    });
+
     if (order?.user_id) {
-      getIo.to(String(order.user_id)).emit('order_state_changed', {
+      console.log(`Emitiendo WS para user ${order.user_id}`);
+      const io = getIo()
+      io.to(String(order.user_id)).emit('order_state_changed', {
         orderId: metadata.order_id,
         status:  newStatus,
       });
+    } else {
+      console.warn(`Order ${metadata.order_id} sin user_id — no WS`);
     }
-  } catch (error) {
-    console.error('MP Webhook Error:', error);
-    // ya respondimos 200, aquí sólo logeamos
+  } catch (err) {
+    console.error('MP Webhook Error:', err);
   }
 };

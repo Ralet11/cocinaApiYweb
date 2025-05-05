@@ -90,8 +90,8 @@ sequelize
  *  - En desarrollo: HTTP en el puerto indicado.
  */
 function startServer(app) {
-  const isProduction = process.env.NODE_ENV === "production";
-  const port = process.env.PORT || 3000;
+  const isProduction = false;
+  const port = 3000;
   let server;
 
   if (isProduction) {

@@ -38,14 +38,37 @@ const createUser = async (req, res) => {
 };
 
 const updateUser = async (req, res) => {
+  const { id } = req.params;
+  const { email, password, ...rest } = req.body;
+
   try {
-    const record = await User.findByPk(req.params.id);
-    if (record) {
-      await record.update(req.body);
-      res.json(record);
-    } else res.status(404).json({ error: 'User no encontrado' });
-  } catch (error) {
-    res.status(500).json({ error: 'Error al actualizar registro' });
+    const user = await User.findByPk(id);
+    if (!user) return res.status(404).json({ error: "User no encontrado" });
+
+    // e‑mail duplicado
+    if (email && email !== user.email) {
+      const exists = await User.findOne({ where: { email } });
+      if (exists) return res.status(400).json({ error: "El correo ya está en uso" });
+      user.email = email;
+    }
+
+    // cambio de contraseña opcional
+    if (password && password.trim() !== "") {
+      user.password = await bcrypt.hash(password, 10);
+    }
+
+    // resto de campos válidos
+    Object.entries(rest).forEach(([k, v]) => {
+      if (v !== undefined) user[k] = v;
+    });
+
+    await user.save();
+
+    const { password: _p, ...safeUser } = user.toJSON();
+    res.json({ message: "Usuario actualizado", user: safeUser });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error al actualizar registro" });
   }
 };
 
